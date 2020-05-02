@@ -6,9 +6,9 @@ until Z4STIN continues updating it himself.
 
 The original v0.3.0 of debandshit.py
 that this is built on from
-can be found [here](https://pastebin.com/NGFBhCCn)
+can be found [here](https://pastebin.com/NGFBhCCn).
 
-# Dependencies
+## Dependencies
 
 debandshit depends on the following third-party scripts:
 
