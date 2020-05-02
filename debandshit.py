@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 from functools import partial
-import math
 from typing import List, Optional
+import math
 
 import vapoursynth as vs
 
@@ -51,7 +51,7 @@ def Dither_bilateral(clip: vs.VideoNode, ref: vs.VideoNode = None,
                     flt = mvf.LimitFilter(flt, clip, thr=1/3)
     """
     if radius is None:
-        radius = max( (clip.width - 1280) / 160 + 12, (clip.height - 720)/ 90 + 12 )
+        radius = max((clip.width - 1280) / 160 + 12, (clip.height - 720)/ 90 + 12)
 
     planes = list(range(clip.format.num_planes)) if planes is None else [planes] if isinstance(planes, int) else planes
     y, u, v = [3 if x in planes else 1 for x in range(3)]
@@ -82,8 +82,8 @@ def Dither_bilateral(clip: vs.VideoNode, ref: vs.VideoNode = None,
 
 
 def Deband(clip: vs.VideoNode,
-           radius = None, str = None, thr = None, thrc = None, smode = 2,
-           mask = None, bin = None, planes = None, **args) -> vs.VideoNode:
+           radius=None, str=None, thr=None, thrc=None, smode=2,
+           mask=None, bin=None, planes=None, **args) -> vs.VideoNode:
     """
     NOTE: GuidedFilter is really, really strong. Using a (much) lower value on 'str' relative to 'thr' is recommended
           I don't even use GF at all anymore but I recall even values like 0.001 having an effect on banding,
@@ -113,7 +113,7 @@ def Deband(clip: vs.VideoNode,
             I've also gotten weird results with LimitFilter in 32 bit before, so probably just stick to 16 bit
    """
     try:
-       from mvsfunc import LimitFilter
+        from mvsfunc import LimitFilter
     except ModuleNotFoundError:
         raise ModuleNotFoundError("deband: missing dependency 'mvsfunc'")
 
@@ -130,7 +130,7 @@ def Deband(clip: vs.VideoNode,
     while len(mask) < 3:
         mask += [mask[-1]]
 
-    bdf = [1.5/255] if args.get('range_in', clip.format.color_family in [vs.RGB,vs.YCOCG]) else [1.5/219, 1.5/224]
+    bdf = [1.5/255] if args.get('range_in', clip.format.color_family in [vs.RGB, vs.YCOCG]) else [1.5/219, 1.5/224]
     bdi = [math.ceil(0.005859375 * (1<<bits))]
     bin = (bdi if isint else bdf) if bin is None else bin if isinstance(bin, list) else [bin]
     while len(bin) < numplanes:
@@ -156,7 +156,7 @@ def Deband(clip: vs.VideoNode,
         #    rmask = rmask.std.Binarize(threshold=bin, planes=bplanes)
         rgvs = core.rgvs if isint else core.rgsf
         for i in range(min(3, max(mask))):
-            rmask = rgvs.RemoveGrain(rmask, [[22,11,20][i] if mask[p] > i and bin[p] > 0 else 0 for p in range(numplanes)])
+            rmask = rgvs.RemoveGrain(rmask, [[22, 11, 20][i] if mask[p] > i and bin[p] > 0 else 0 for p in range(numplanes)])
         deband = deband.std.MaskedMerge(clip, rmask, planes=planes)
 
     return deband
@@ -169,7 +169,7 @@ def parse_params(str, thr, thrc, numplanes):
             str += [thr]
         if thrc is not None:
             str += [thrc]
-        if len(str)==0:
+        if len(str) == 0:
             str += [1/3]
 
     while len(str) < numplanes:
@@ -182,7 +182,7 @@ def parse_params(str, thr, thrc, numplanes):
         thr = str[0]
     # probably unnecessary but mt_lut was faster with the same expression for all planes so maybe std.Expr is too?
     # Its not a lut though so I doubt it
-    if thr == thrc or numplanes==1:
+    if thr == thrc or numplanes == 1:
         thrc = None
 
     return [str, thr, thrc]
@@ -191,14 +191,14 @@ def parse_params(str, thr, thrc, numplanes):
 # This is flat-out theft, but I wanted "planes" and separable strengths & radii so fuck it
 
 def GuidedFilter(input,
-                 guidance = None,
-                 radius = None, thr = 1/3,
-                 regulation = None, regulation_mode = 2,
-                 use_gauss = False, fast = None,
-                 subsampling_ratio = 4,
-                 use_fmtc1 = False, kernel1 = 'point', kernel1_args = None,
-                 use_fmtc2 = False, kernel2 = 'bilinear', kernel2_args = None,
-                 planes = None, **depth_args):
+                 guidance=None,
+                 radius=None, thr=1/3,
+                 regulation=None, regulation_mode=2,
+                 use_gauss=False, fast=None,
+                 subsampling_ratio=4,
+                 use_fmtc1=False, kernel1='point', kernel1_args=None,
+                 use_fmtc2=False, kernel2='bilinear', kernel2_args=None,
+                 planes=None, **depth_args):
     """
     Guided Filter - fast edge-preserving smoothing algorithm
     Author: Kaiming He et al. (http://kaiminghe.com/eccv10/)
@@ -279,7 +279,7 @@ def GuidedFilter(input,
     funcName = 'GuidedFilter'
 
     try:
-       from fvsfunc import Depth
+        from fvsfunc import Depth
     except ModuleNotFoundError:
         raise ModuleNotFoundError("GuidedFilter: missing dependency 'fvsfunc'")
 
@@ -308,10 +308,10 @@ def GuidedFilter(input,
 
     if radius is None:
         width_c = width / (1 << input.format.subsampling_w)
-        height_c= height/ (1 << input.format.subsampling_h)
+        height_c = height/ (1 << input.format.subsampling_h)
 
-        rad = max( (width   - 1280) / 160 + 12, (height - 720) / 90 + 12 )
-        radc= max( (width_c - 1280) / 160 + 12, (height_c-720) / 90 + 12 )
+        rad = max((width   - 1280) / 160 + 12, (height - 720) / 90 + 12)
+        radc = max((width_c - 1280) / 160 + 12, (height_c-720) / 90 + 12)
         radius = [round(rad), round(radc)][:numpl]
 
     if guidance is not None:
@@ -445,7 +445,7 @@ def GuidedFilter(input,
 
 def BoxFilter(clip, radius, planes):
     try:
-       from muvsfunc import BoxFilter
+        from muvsfunc import BoxFilter
     except ModuleNotFoundError:
         raise ModuleNotFoundError("BoxFilter: missing dependency 'muvsfunc'")
 
@@ -483,7 +483,7 @@ def f3kbilateral(clip: vs.VideoNode,
 
     f = clip.format
     bits = f.bits_per_sample
-    isGRAY = f.color_family==vs.GRAY
+    isGRAY = f.color_family == vs.GRAY
 
     range = (12 if clip.width < 1800 and clip.height < 1000 else 16) if range is None else range
     r1 = round(range*4/3)
@@ -496,7 +496,7 @@ def f3kbilateral(clip: vs.VideoNode,
     c2 = c
     c3 = c
 
-    if c==0:
+    if c == 0:
         flt0 = togray(clip, 16)
     else:
         flt0 = Depth(clip, 16)
@@ -508,7 +508,7 @@ def f3kbilateral(clip: vs.VideoNode,
     flt = LimitFilter(flt3, flt2, ref=flt0, thr=thr, elast=elast, thrc=thrc)
     flt = Depth(flt, bits)
 
-    if c==0 and not isGRAY:
+    if c == 0 and not isGRAY:
         flt = MergeChroma(flt, clip)
 
     return flt
@@ -554,11 +554,11 @@ def f3kpf(clip, range=None, y=40, cb=40, cr=None, thr=0.3, elast=2.5, thrc=None)
 ############################################
 def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
     try:
-       from fvsfunc import Depth
+        from fvsfunc import Depth
     except ModuleNotFoundError:
         raise ModuleNotFoundError("lfdeband: missing dependency 'fvsfunc'")
 
-    f =  clip.format
+    f = clip.format
     bits = f.bits_per_sample
     wss = 1 << f.subsampling_w
     hss = 1 << f.subsampling_h
@@ -568,10 +568,10 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
     dh = round(h / 2)
 
     clp = Depth(clip, 32)
-    dsc = clp.fmtc.resample(dw-dw%wss, dh-dh%hss, kernel = 'spline64')
-    ddb = f3kdb(dsc, range = 30, y = 80, cb = 80, cr = 80, grainy = 0, grainc = 0)
+    dsc = clp.fmtc.resample(dw-dw%wss, dh-dh%hss, kernel='spline64')
+    ddb = f3kdb(dsc, range=30, y=80, cb=80, cr=80, grainy=0, grainc=0)
     ddif = ddb.std.MakeDiff(dsc)
-    dif = ddif.fmtc.resample(w, h, kernel = 'spline64')
+    dif = ddif.fmtc.resample(w, h, kernel='spline64')
     out = clp.std.MergeDiff(dif)
     return Depth(out, bits)
 
@@ -582,7 +582,7 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
 ###########################################################################################
 def f3kdb(clip, range=None, y=40, cb=None, cr=None, grainy=0, grainc=0, depth=None):
     try:
-       from fvsfunc import Depth
+        from fvsfunc import Depth
     except ModuleNotFoundError:
         raise ModuleNotFoundError("f3kdb: missing dependency 'fvsfunc'")
 
@@ -607,7 +607,7 @@ def f3kdb(clip, range=None, y=40, cb=None, cr=None, grainy=0, grainc=0, depth=No
     if output_depth == 32:
         return Depth(deb, 32)
     else:
-        return forceint16(deb, undo = H16)
+        return forceint16(deb, undo=H16)
 
 
 #######################################################
@@ -643,9 +643,9 @@ def rangemask(clip: vs.VideoNode, rad: int = 2, radc: Optional[int] = None) -> v
 
     expr = 'x y -'
     if not rad:
-        expr = ['','x y -']
+        expr = ['', 'x y -']
     if not radc:
-        expr = ['x y -','']
+        expr = ['x y -', '']
 
     return core.std.Expr([ma, mi], expr)
 
@@ -665,9 +665,9 @@ def lumamask(clip, lo, hi, invert=True):
     peak = (1 << bits) - 1 if isINT else 1
 
     if invert:
-        mexpr = 'x {lo} < {peak} x {hi} > 0 {peak} x {lo} - {peak} {hi} {lo} - / * - ? ?'.format(peak=peak,lo=lo,hi=hi)
+        mexpr = 'x {lo} < {peak} x {hi} > 0 {peak} x {lo} - {peak} {hi} {lo} - / * - ? ?'.format(peak=peak, lo=lo, hi=hi)
     else:
-        mexpr = 'x {lo} < 0 x {hi} > {peak} 0 x {lo} - {peak} {lo} {hi} - / * - ? ?'.format(peak=peak,lo=lo,hi=hi)
+        mexpr = 'x {lo} < 0 x {hi} > {peak} 0 x {lo} - {peak} {lo} {hi} - / * - ? ?'.format(peak=peak, lo=lo, hi=hi)
 
     clip = togray(clip, bits, 1)
     mask = clip.std.Expr(mexpr)
@@ -687,7 +687,7 @@ def togray(clip: vs.VideoNode,
            range: Optional[int] = None,
            int16: bool = True) -> vs.VideoNode:
     try:
-       from mvsfunc import GetPlane, GetMatrix
+        from mvsfunc import GetPlane, GetMatrix
     except ModuleNotFoundError:
         raise ModuleNotFoundError("deband: missing dependency 'mvsfunc'")
 
@@ -698,8 +698,8 @@ def togray(clip: vs.VideoNode,
     in_st = f.sample_type
     in_bits = f.bits_per_sample
 
-    bits = in_bits if bits==None else bits
-    st = (vs.INTEGER if int16 else (in_st if in_bits==16 else vs.INTEGER)) if bits < 32 else vs.FLOAT
+    bits = in_bits if bits == None else bits
+    st = (vs.INTEGER if int16 else (in_st if in_bits == 16 else vs.INTEGER)) if bits < 32 else vs.FLOAT
 
     if (in_bits, in_st) == (bits, st) and isGRAY:
         return clip
@@ -708,7 +708,7 @@ def togray(clip: vs.VideoNode,
     else:
         format = core.register_format(vs.GRAY, st, bits, 0, 0)
         matrix = None if isGRAY or isYUV else GetMatrix(clip, id=True)
-        dither_type = dmode if isinstance(dmode, str) else 'ordered' if dmode==0 else 'none' if dmode<3 else 'error_diffusion'
+        dither_type = dmode if isinstance(dmode, str) else 'ordered' if dmode == 0 else 'none' if dmode < 3 else 'error_diffusion'
         return clip.resize.Spline36(format=format.id, matrix=matrix, dither_type=dither_type, range_in=range, range=range)
 
 
