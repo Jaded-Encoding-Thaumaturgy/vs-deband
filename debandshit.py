@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import functools
+from functools import partial
 import math
 from typing import List, Optional
 
@@ -358,8 +358,8 @@ def GuidedFilter(input,
         r = round(r / s + 0.5)
 
     # Select the shape of the kernel. As the width of BoxFilter in this module is (radius*2-1) rather than (radius*2+1), radius should be increased by one.
-    Filter = functools.partial(core.tcanny.TCanny, sigma=[val/2 * math.sqrt(2) for val in r], mode=-1, planes=planes) if use_gauss else functools.partial(BoxFilter, radius=[val+1 for val in r], planes=planes)
-    Filter_r1 = functools.partial(core.tcanny.TCanny, sigma=1/2 * math.sqrt(2), mode=-1, planes=planes) if use_gauss else functools.partial(BoxFilter, radius=1+1, planes=planes)
+    Filter = partial(core.tcanny.TCanny, sigma=[val/2 * math.sqrt(2) for val in r], mode=-1, planes=planes) if use_gauss else partial(BoxFilter, radius=[val+1 for val in r], planes=planes)
+    Filter_r1 = partial(core.tcanny.TCanny, sigma=1/2 * math.sqrt(2), mode=-1, planes=planes) if use_gauss else partial(BoxFilter, radius=1+1, planes=planes)
 
 
     # Edge-Aware Weighting, equation (5) in [3], or equation (9) in [4].
@@ -408,13 +408,13 @@ def GuidedFilter(input,
         denominator = core.std.Expr([weight_in], _get_expr_array(['1 x {} + /'.format(eps0)]*numpl, planes, numpl))
 
         denominator = core.std.PlaneStats(denominator, plane=[0])
-        weight = core.std.FrameEval(denominator, functools.partial(_FLT, clip=weight_in, core=core, eps0=eps0, planes=planes, numpl=numpl), prop_src=[denominator]) # equation (5) in [3], or equation (9) in [4]
+        weight = core.std.FrameEval(denominator, partial(_FLT, clip=weight_in, core=core, eps0=eps0, planes=planes, numpl=numpl), prop_src=[denominator]) # equation (5) in [3], or equation (9) in [4]
 
         if regulation_mode == 1: # Weighted Guided Image Filter
             a = core.std.Expr([cov_Ip, var_I, weight], _get_expr_array(['x y {eps} z / + /'.format(eps=e) for e in eps], planes, numpl))
         else: # regulation_mode == 2, Gradient Domain Guided Image Filter
             weight_in = core.std.PlaneStats(weight_in, plane=[0])
-            a = core.std.FrameEval(weight, functools.partial(_FLT2, cov_Ip=cov_Ip, weight_in=weight_in, weight=weight, var_I=var_I, core=core, eps=eps, planes=planes, numpl=numpl), prop_src=[weight_in])
+            a = core.std.FrameEval(weight, partial(_FLT2, cov_Ip=cov_Ip, weight_in=weight_in, weight=weight, var_I=var_I, core=core, eps=eps, planes=planes, numpl=numpl), prop_src=[weight_in])
     else: # regulation_mode == 0, Original Guided Filter
         a = core.std.Expr([cov_Ip, var_I], _get_expr_array(['x y {} + /'.format(e) for e in eps], planes, numpl))
 
