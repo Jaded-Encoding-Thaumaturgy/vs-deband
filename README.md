@@ -1,4 +1,12 @@
-debandshit, a collection of wrappers and functions for debanding and masking.
+debandshit, a collection of wrappers and functions
+for debanding and masking.
+
+This repository is intended to be an updated version of debandshit
+until Z4STIN continues updating it himself.
+
+The original v0.3.0 of debandshit.py
+that this is built on from
+can be found [here](https://pastebin.com/NGFBhCCn)
 
 # Dependencies
 
