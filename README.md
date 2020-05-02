@@ -18,7 +18,6 @@ debandshit depends on the following third-party scripts:
 
 The following Vapoursynth libraries are also required for full functionality:
 
-- [f3kdb](https://f3kdb.readthedocs.io/en/latest/)
+- [neo_f3kdb](https://github.com/HomeOfAviSynthPlusEvolution/neo_f3kdb) or [f3kdb](https://f3kdb.readthedocs.io/en/latest/)
 - [fmtconv](https://github.com/EleonoreMizo/fmtconv)
 - [rgsf](https://github.com/IFeelBloated/RGSF)
-
