@@ -536,7 +536,7 @@ def f3kpf(clip, range=None, y=40, cb=40, cr=None, thr=0.3, elast=2.5, thrc=None)
         clp = togray(clip, 32)
     else:
         clp = Depth(clip, 32)
-    blur32 = clp.std.Convolution([1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1, 1, 1, 1, 1, 1, 1, 1], planes=0)
+    blur32 = clp.std.Convolution([1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     blur16 = Depth(blur32, 16)
     diff = clp.std.MakeDiff(blur32)
     f3k = f3kdb(blur16, range, y, cb, cr)
@@ -729,7 +729,7 @@ def maxm(clip: vs.VideoNode, sy: int = 2, sc: int = 2) -> vs.VideoNode:
     cp = sc>=sy
     citer = 1 if cp else 0
     planes = [0] if yp and not cp else [1,2] if cp and not yp else [0,1,2]
-    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1, 1, 1, 1, 1, 1, 1, 1]
+    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1] * 8
 
     if sy>0 or sc>0:
         return maxm(clip.std.Maximum(planes=planes, coordinates=coor), sy=sy-yiter, sc=sc-citer)
@@ -743,7 +743,7 @@ def minm(clip: vs.VideoNode, sy: int = 2, sc: int = 2) -> vs.VideoNode:
     cp = sc>=sy
     citer = 1 if cp else 0
     planes = [0] if yp and not cp else [1,2] if cp and not yp else [0,1,2]
-    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1, 1, 1, 1, 1, 1, 1, 1]
+    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1] * 8
 
     if sy>0 or sc>0:
         return minm(clip.std.Minimum(planes=planes, coordinates=coor), sy=sy-yiter, sc=sc-citer)
