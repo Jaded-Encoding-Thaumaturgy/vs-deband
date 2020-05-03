@@ -602,7 +602,12 @@ def f3kdb(clip, range=None, y=40, cb=None, cr=None, grainy=0, grainc=0, depth=No
     else:
         clip = forceint16(clip)
 
-    deb = core.f3kdb.Deband(clip, range, y, cb, cr, grainy, grainc, keep_tv_range=tv_range, output_depth=min(output_depth, 16))
+    if hasattr(core, 'neo_f3kdb'):
+        f3kdb = partial(core.neo_f3kdb.Deband)
+    else:
+        f3kdb = partial(core.f3kdb.Deband)
+
+    deb = f3kdb(clip, range, y, cb, cr, grainy, grainc, keep_tv_range=tv_range, output_depth=min(output_depth, 16))
 
     if output_depth == 32:
         return Depth(deb, 32)
