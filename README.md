@@ -12,7 +12,7 @@ remove that from your system first.
 Install `debandshit` with the following command:
 
 ```sh
-$ pip install debandshit
+$ pip install vs-debandshit
 ```
 
 ## Dependencies

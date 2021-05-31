@@ -8,7 +8,7 @@ with open("README.md") as fh:
 with open("requirements.txt") as fh:
     install_requires = fh.read()
 
-name = "debandshit"
+name = "vs-debandshit"
 version = "0.4.1"
 release = "0.4.1"
 
