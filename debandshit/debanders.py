@@ -4,10 +4,12 @@
     This used to be the `debandshit` module written by Z4ST1N,
     with some functions that were rarely (if ever) used removed because I can't reasonably maintain them.
 """
+import warnings
 from typing import Any, List, Optional, Union
 
 import vapoursynth as vs
 from vardefunc.deband import dumb3kdb
+from vardefunc.deband import lfdeband as lfdeband_vardefunc
 from vsutil import depth
 
 core = vs.core
@@ -114,27 +116,11 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
 
     :return:            Debanded clip
     """
-    if clip.format is None:
-        raise ValueError("lfdeband: 'Variable-format clips not supported'")
+    warnings.warn(
+        "lfdeband: 'This function is deprecated, use vardefunc.deband.lfdeband from now on", DeprecationWarning
+    )
 
-    bits = clip.format.bits_per_sample
-    wss = 1 << clip.format.subsampling_w
-    hss = 1 << clip.format.subsampling_h
-    w, h = clip.width, clip.height
-    dw, dh = round(w / 2), round(h / 2)
-
-    clip = depth(clip, 32)
-    dsc = core.resize.Spline64(clip, dw-dw % wss, dh-dh % hss)
-
-    d3kdb_down = depth(dsc, 16)
-    d3kdb = dumb3kdb(d3kdb_down, radius=30, threshold=80, grain=0)
-    d3kdb_up = depth(d3kdb, 32)
-
-    ddif = core.std.MakeDiff(d3kdb_up, dsc)
-
-    dif = core.resize.Spline64(ddif, w, h)
-    out = core.std.MergeDiff(clip, dif)
-    return depth(out, bits)
+    return lfdeband_vardefunc(clip)
 
 
 def dither_bilateral(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None,
