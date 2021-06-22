@@ -1,12 +1,20 @@
+from enum import IntEnum
 from typing import Any, Dict, List, Union
 
 import vapoursynth as vs
 
-
 core = vs.core
 
 
-__all__ = ['F3kdb', 'dumb3kdb']
+__all__ = ['SampleMode', 'F3kdb', 'dumb3kdb']
+
+
+
+class SampleMode(IntEnum):
+    COLUMN = 1
+    SQUARE = 2
+    ROW = 3
+    COL_ROW_MEAN = 4
 
 
 class F3kdb:
@@ -17,7 +25,7 @@ class F3kdb:
     thcr: int
     gry: int
     grc: int
-    sample_mode: int
+    sample_mode: SampleMode
     use_neo: bool
     f3kdb_args: Dict[str, Any]
 
@@ -26,7 +34,7 @@ class F3kdb:
     def __init__(self,
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-                 sample_mode: int = 2, use_neo: bool = False, **kwargs: Any) -> None:
+                 sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
@@ -34,13 +42,13 @@ class F3kdb:
         :param threshold:       Banding detection threshold(s) for planes
         :param grain:           Specifies amount of grains added in the last debanding stage
         :param sample_mode:     Valid modes are:
-                                1:  Take 2 pixels as reference pixel
-                                    Reference pixels are in the same column of current pixel
-                                2:  Take 4 pixels as reference pixel
-                                    Reference pixels are in the square around current pixel
-                                3:  Take 2 pixels as reference pixel
-                                    Reference pixels are in the same row of current pixel
-                                4:  Arithmetic mean of 1 and 3
+                                * SampleMode.COLUMN: Take 2 pixels as reference pixel
+                                  Reference pixels are in the same column of current pixel
+                                * SampleMode.SQUARE: Take 4 pixels as reference pixel
+                                  Reference pixels are in the square around current pixel
+                                * SampleMode.ROW: Take 2 pixels as reference pixel
+                                  Reference pixels are in the same row of current pixel
+                                * SampleMode.COL_ROW_MEAN: Arithmetic mean of 1 and 3
                                 Reference points are randomly picked within the range
         :param use_neo:         Use neo_f3kdb.Deband
         :param kwargs:          Arguments passed to f3kdb.Deband
@@ -135,5 +143,5 @@ class F3kdb:
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
              threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-             sample_mode: int = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
+             sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
     return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
