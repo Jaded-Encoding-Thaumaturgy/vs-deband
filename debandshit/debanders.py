@@ -8,8 +8,6 @@ import warnings
 from typing import Any, List, Optional, Union
 
 import vapoursynth as vs
-from vardefunc.deband import dumb3kdb
-from vardefunc.deband import lfdeband as lfdeband_vardefunc
 from vsutil import depth
 
 core = vs.core

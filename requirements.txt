@@ -1,3 +1,2 @@
 VapourSynth>=51
-vardefunc>=0.2.7
 vsutil>=0.5.0
