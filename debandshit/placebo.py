@@ -15,14 +15,12 @@ class Placebo:
     iterations: int
     grain: List[float]
 
-    chroma: bool
-
     placebodb_args: Dict[str, Any]
 
     def __init__(self,
                  radius: float = 16.0, threshold: Union[float, List[float]] = 4.0,
                  iterations: int = 1, grain: Union[float, List[float]] = 6.0,
-                 chroma: bool = True, **kwargs: Any) -> None:
+                 **kwargs: Any) -> None:
         """
         Wrapper for placebo.Deband
         https://github.com/Lypheo/vs-placebo#vs-placebo
@@ -49,8 +47,6 @@ class Placebo:
                                 in a very big change to the brightness level.
                                 It's recommended to either scale this value down or disable it entirely for HDR.
 
-        :param chroma:          Process chroma planes or not.
-
         :param kwargs:          Arguments passed to f3kdb.Deband
         """
 
@@ -68,8 +64,6 @@ class Placebo:
         else:
             self.grain = grain + [grain[-1]] * (3 - len(grain))
 
-        self.chroma = chroma
-
         self.placebodb_args = kwargs
 
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
@@ -82,17 +76,8 @@ class Placebo:
         if clip.format is None:
             raise ValueError('deband: Variable format not allowed!')
 
-        if self.chroma and clip.format.num_planes > 1:
-            planes = split(clip)
-
-            for i, (thr, gra) in enumerate(zip(self.threshold, self.grain)):
-                planes[i] = planes[i].placebo.Deband(
-                    1, self.iterations, thr, self.radius, gra, **self.placebodb_args
-                )
-            deband = join(planes)
-        else:
-            deband = clip.placebo.Deband(
-                1, self.iterations, self.threshold[0], self.radius, self.grain[0], **self.placebodb_args
-            )
-
-        return deband
+        debs = [
+            p.placebo.Deband(1, self.iterations, thr, self.radius, gra, **self.placebodb_args)
+            for p, thr, gra in zip(split(clip), self.threshold, self.grain)
+        ]
+        return debs[0] if len(debs) == 1 else join(debs, clip.format.color_family)
