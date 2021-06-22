@@ -1,5 +1,3 @@
-"""Docstring"""
-
 from typing import Any, Dict, List, Union
 
 import vapoursynth as vs
@@ -29,34 +27,23 @@ class F3kdb:
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
                  sample_mode: int = 2, use_neo: bool = False, **kwargs: Any) -> None:
-        """ Handle debanding operations onto a clip using a set of configured parameters.
+        """
+        Handle debanding operations onto a clip using a set of configured parameters.
 
-        Args:
-            radius (int, optional):
-                Banding detection range. Defaults to 16.
-
-            threshold (Union[int, List[int]], optional):
-                Banding detection threshold(s) for planes.
-                If difference between current pixel and reference pixel is less than threshold,
-                it will be considered as banded. Defaults to 30.
-
-            grain (Union[int, List[int]], optional):
-                Specifies amount of grains added in the last debanding stage. Defaults to 0.
-
-            sample_mode (int, optional):
-                Valid modes are:
-                    – 1: Take 2 pixels as reference pixel. Reference pixels are in the same column of current pixel.
-                    – 2: Take 4 pixels as reference pixel. Reference pixels are in the square around current pixel.
-                    – 3: Take 2 pixels as reference pixel. Reference pixels are in the same row of current pixel.
-                    – 4: Arithmetic mean of 1 and 3.
-                Reference points are randomly picked within the range. Defaults to 2.
-
-            use_neo (bool, optional):
-                Use neo_f3kdb.Deband. Defaults to False.
-
-            kwargs (optional):
-                Arguments passed to f3kdb.Deband.
-
+        :param radius:          Banding detection range
+        :param threshold:       Banding detection threshold(s) for planes
+        :param grain:           Specifies amount of grains added in the last debanding stage
+        :param sample_mode:     Valid modes are:
+                                1:  Take 2 pixels as reference pixel
+                                    Reference pixels are in the same column of current pixel
+                                2:  Take 4 pixels as reference pixel
+                                    Reference pixels are in the square around current pixel
+                                3:  Take 2 pixels as reference pixel
+                                    Reference pixels are in the same row of current pixel
+                                4:  Arithmetic mean of 1 and 3
+                                Reference points are randomly picked within the range
+        :param use_neo:         Use neo_f3kdb.Deband
+        :param kwargs:          Arguments passed to f3kdb.Deband
         """
         self.radius = radius
 
@@ -78,13 +65,10 @@ class F3kdb:
 
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
         """
-            Main deband function.
+        Main deband function
 
-        Args:
-            clip (vs.VideoNode): Source clip.
-
-        Returns:
-            vs.VideoNode: Debanded clip.
+        :param clip:            Source clip
+        :return:                Debanded clip
         """
         if clip.format is None:
             raise ValueError('deband: Variable format not allowed!')
@@ -129,13 +113,11 @@ class F3kdb:
         return deband
 
     def grain(self, clip: vs.VideoNode) -> vs.VideoNode:
-        """Convenience function that set thresholds to 1 (basically it doesn't deband)
+        """
+        Convenience function that set thresholds to 1 (basically it doesn't deband)
 
-        Args:
-            clip (vs.VideoNode): Source clip.
-
-        Returns:
-            vs.VideoNode: Grained clip.
+        :param clip:            Source clip
+        :return:                Grained clip
         """
         self.thy, self.thcr, self.thcb = (1, ) * 3
         return self.deband(clip)
