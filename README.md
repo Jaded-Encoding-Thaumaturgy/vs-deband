@@ -20,7 +20,6 @@ $ pip install vs-debandshit
 debandshit depends on the following third-party scripts:
 
 - [mvsfunc](https://github.com/HomeOfVapourSynthEvolution/mvsfunc)
-- [vardefunc](https://pypi.org/project/vardefunc/)
 - [vsutil](https://pypi.org/project/vsutil/)
 
 And the following VapourSynth libraries:
