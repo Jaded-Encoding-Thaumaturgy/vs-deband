@@ -13,6 +13,8 @@ from .f3kdb import F3kdb
 
 core = vs.core
 
+__all__ = ['f3kbilateral', 'f3kpf', 'lfdeband']
+
 
 def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
                  threshold: Union[int, List[int]] = 65, grain: Union[int, List[int]] = 0,

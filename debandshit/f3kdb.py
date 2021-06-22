@@ -8,6 +8,9 @@ import vapoursynth as vs
 core = vs.core
 
 
+__all__ = ['F3kdb', 'dumb3kdb']
+
+
 class F3kdb:
     """f3kdb object."""
     radius: int
