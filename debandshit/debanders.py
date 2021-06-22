@@ -54,7 +54,6 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
     lf_args: Dict[str, Any] = dict(thr=0.6, elast=3.0, thrc=None)
     lf_args |= limflt_args
 
-
     rad1 = round(radius * 4 / 3)
     rad2 = round(radius * 2 / 3)
     rad3 = round(radius / 3)
@@ -65,7 +64,6 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
 
     # Edit the thr of first f3kdb object
     db1.thy, db1.thcb, db1.thcr = [max(1, th // 2) for th in (db1.thy, db1.thcb, db1.thcr)]
-
 
     clip = depth(clip, 16)
 
@@ -111,13 +109,11 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     if clip.format is None:
         raise ValueError("f3kpf: 'Variable-format clips not supported'")
 
-
     f3_args: Dict[str, Any] = dict()
     f3_args |= f3kdb_args
 
     lf_args: Dict[str, Any] = dict(thr=0.3, elast=2.5, thrc=None)
     lf_args |= limflt_args
-
 
     blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     diff = core.std.MakeDiff(clip, blur)
@@ -126,7 +122,6 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     deband = LimitFilter(deband, blur, **lf_args)
 
     return core.std.MergeDiff(deband, diff)
-
 
 
 def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:

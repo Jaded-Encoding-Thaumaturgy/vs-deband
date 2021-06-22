@@ -22,7 +22,6 @@ class F3kdb:
 
     _step: int
 
-
     def __init__(self,
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
@@ -56,11 +55,10 @@ class F3kdb:
                 Arguments passed to f3kdb.Deband.
 
         """
-
         self.radius = radius
 
-        self.thy, self.thcb, self.thcr = [threshold] * 3 if isinstance(threshold, int) else threshold + [threshold[-1]] * (3 - len(threshold))
-        self.thy, self.thcb, self.thcr = [max(1, x) for x in [self.thy, self.thcb, self.thcr]]
+        th_s = [threshold] * 3 if isinstance(threshold, int) else threshold + [threshold[-1]] * (3 - len(threshold))
+        self.thy, self.thcb, self.thcr = [max(1, x) for x in th_s]
 
         self.gry, self.grc = [grain] * 2 if isinstance(grain, int) else grain + [grain[-1]] * (2 - len(grain))
 
@@ -75,7 +73,6 @@ class F3kdb:
         self.f3kdb_args = dict(keep_tv_range=True, output_depth=16)
         self.f3kdb_args |= kwargs
 
-
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
         """
             Main deband function.
@@ -88,7 +85,6 @@ class F3kdb:
         """
         if clip.format is None:
             raise ValueError('deband: Variable format not allowed!')
-
 
         if self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
             deband = self._pick_f3kdb(self.use_neo,
@@ -112,9 +108,15 @@ class F3kdb:
                                        self.sample_mode, **self.f3kdb_args)
 
             if clip.format.color_family == vs.GRAY:
-                weight = [(self.thy - loy) / self._step]
+                weight = [
+                    (self.thy - loy) / self._step
+                ]
             else:
-                weight = [(self.thy - loy) / self._step, (self.thcb - locb) / self._step, (self.thcr - locr) / self._step]
+                weight = [
+                    (self.thy - loy) / self._step,
+                    (self.thcb - locb) / self._step,
+                    (self.thcr - locr) / self._step
+                ]
 
             deband = core.std.Merge(lo_clip, hi_clip, weight)
 
