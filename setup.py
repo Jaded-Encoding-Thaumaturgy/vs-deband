@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import setuptools
 
 with open("README.md") as fh:
@@ -8,13 +6,13 @@ with open("README.md") as fh:
 with open("requirements.txt") as fh:
     install_requires = fh.read()
 
-name = "vs-debandshit"
-version = "0.4.2"
-release = "0.4.2"
+NAME = "vs-debandshit"
+# VERSION = "0.4.2"
+RELEASE = "0.4.2"
 
 setuptools.setup(
-    name=name,
-    version=release,
+    name=NAME,
+    version=RELEASE,
     author="LightArrowsEXE",
     author_email="Lightarrowsreboot@gmail.com",
     description="VapourSynth Debanding Functions Collection",
