@@ -9,7 +9,6 @@ core = vs.core
 __all__ = ['SampleMode', 'F3kdb', 'dumb3kdb']
 
 
-
 class SampleMode(IntEnum):
     COLUMN = 1
     SQUARE = 2
