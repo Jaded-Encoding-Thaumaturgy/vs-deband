@@ -4,72 +4,97 @@
     This used to be the `debandshit` module written by Z4ST1N,
     with some functions that were rarely (if ever) used removed because I can't reasonably maintain them.
 """
-import warnings
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import vapoursynth as vs
 from vsutil import depth
 
+from .f3kdb import F3kdb
+
 core = vs.core
 
 
-def f3kbilateral(clip: vs.VideoNode,
-                 radius: int = 16,
-                 y: int = 64, c: int = 1,
-                 **kwargs: Any) -> vs.VideoNode:
+def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
+                 threshold: Union[int, List[int]] = 65, grain: Union[int, List[int]] = 0,
+                 f3kdb_args: Optional[Dict[str, Any]] = None,
+                 limflt_args: Optional[Dict[str, Any]] = None) -> vs.VideoNode:
     """
     f3kbilateral: f3kdb multistage bilateral-esque filter from debandshit.
 
     This function is more of a last resort for extreme banding.
     Recommend values are ~40-60 for y and c strengths.
 
+    Dependencies:
+    * mvsfunc
+
     :param clip:        Input clip
-    :param radius:      Banding detection range
-    :param y:           Banding detection threshold for luma
-    :param c:           Banding detection threshold for chroma
-    :param kwargs:      Arguments passed to mvsfunc.LimitFilter
+    :param radius:      Same as F3kdb constructor.
+    :param threshold:   Same as F3kdb constructor.
+    :param grain:       Same as F3kdb constructor.
+                        It happens after mvsfunc.LimitFilter
+                        and call another instance of F3kdb if != 0.
+    :f3kdb_args:        Same as F3kdb kwargs constructor.
+    :lf_args:           Arguments passed to mvsfunc.LimitFilter.
 
     :return:            Debanded clip
     """
     try:
         from mvsfunc import LimitFilter
-    except ModuleNotFoundError:
-        raise ModuleNotFoundError("f3kbilateral: missing dependency 'mvsfunc'")
+    except ModuleNotFoundError as mod_err:
+        raise ModuleNotFoundError("f3kbilateral: missing dependency 'mvsfunc'") from mod_err
 
     if clip.format is None:
         raise ValueError("f3kbilateral: 'Variable-format clips not supported'")
 
     bits = clip.format.bits_per_sample
 
-    if bits < 16:
-        clip = depth(clip, 16)
+    f3_args: Dict[str, Any] = dict()
+    f3_args |= f3kdb_args
 
-    lf_args: Any = dict(thr=0.6, elast=3.0, thrc=None)
-    lf_args.update(kwargs)
-
-    r1 = round(radius * 4 / 3)
-    r2 = round(radius * 2 / 3)
-    r3 = round(radius / 3)
-    y1, y2, y3 = y // 2, y, y
-    c1, c2, c3 = max(1, c // 2), c, c
-
-    flt1 = dumb3kdb(clip, radius=r1, threshold=[y1, c1, c1])
-    flt2 = dumb3kdb(flt1, radius=r2, threshold=[y2, c2, c2])
-    flt3 = dumb3kdb(flt2, radius=r3, threshold=[y3, c3, c3])
-
-    lf = LimitFilter(flt3, flt2, ref=clip, **lf_args)
-    return depth(lf, bits) if bits < 16 else lf
+    lf_args: Dict[str, Any] = dict(thr=0.6, elast=3.0, thrc=None)
+    lf_args |= limflt_args
 
 
-def f3kpf(clip: vs.VideoNode,
-          radius: int = 16,
-          threshold: Union[int, List[int]] = 30,
-          **kwargs: Any) -> vs.VideoNode:
+    rad1 = round(radius * 4 / 3)
+    rad2 = round(radius * 2 / 3)
+    rad3 = round(radius / 3)
+
+    db1 = F3kdb(rad1, threshold, 0, **f3_args)
+    db2 = F3kdb(rad2, threshold, 0, **f3_args)
+    db3 = F3kdb(rad3, threshold, 0, **f3_args)
+
+    # Edit the thr of first f3kdb object
+    db1.thy, db1.thcb, db1.thcr = [max(1, th // 2) for th in (db1.thy, db1.thcb, db1.thcr)]
+
+
+    clip = depth(clip, 16)
+
+    flt1 = db1.deband(clip)
+    flt2 = db2.deband(flt1)
+    flt3 = db3.deband(flt2)
+
+    limit = LimitFilter(flt3, flt2, ref=clip, **lf_args)
+
+    if grain != 0 or grain is not None:
+        grained = F3kdb(grain=grain, **f3_args).grain(limit)
+    else:
+        grained = limit
+
+    return depth(grained, bits)
+
+
+def f3kpf(clip: vs.VideoNode, radius: int = 16,
+          threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
+          f3kdb_args: Optional[Dict[str, Any]] = None,
+          limflt_args: Optional[Dict[str, Any]] = None) -> vs.VideoNode:
     """
     f3kdb with a simple prefilter by mawen1250 - https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.
 
     Since the prefilter is a straight gaussian+average blur, f3kdb's effect becomes very strong, very fast.
     Functions more or less like gradfun3 without the detail mask.
+
+    Dependencies:
+    * mvsfunc
 
     :param clip:        Input clip
     :param radius:      Banding detection range
@@ -80,30 +105,28 @@ def f3kpf(clip: vs.VideoNode,
     """
     try:
         from mvsfunc import LimitFilter
-    except ModuleNotFoundError:
-        raise ModuleNotFoundError("f3kpf: missing dependency 'mvsfunc'")
+    except ModuleNotFoundError as mod_err:
+        raise ModuleNotFoundError("f3kpf: missing dependency 'mvsfunc'") from mod_err
 
     if clip.format is None:
         raise ValueError("f3kpf: 'Variable-format clips not supported'")
 
-    lf_args: Any = dict(thr=0.3, elast=2.5, thrc=None)
-    lf_args.update(kwargs)
 
-    bits = clip.format.bits_per_sample
+    f3_args: Dict[str, Any] = dict()
+    f3_args |= f3kdb_args
 
-    if bits != 32:
-        clip = depth(clip, 32)
+    lf_args: Dict[str, Any] = dict(thr=0.3, elast=2.5, thrc=None)
+    lf_args |= limflt_args
 
-    blur32 = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
-    blur16 = depth(blur32, 16)
 
-    diff = core.std.MakeDiff(clip, blur32)
-    f3k = dumb3kdb(blur16, radius, threshold)
-    f3k = LimitFilter(f3k, blur16, **lf_args)
-    f3k = depth(f3k, 32)
+    blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
+    diff = core.std.MakeDiff(clip, blur)
 
-    out = core.std.MergeDiff(f3k, diff)
-    return depth(out, bits)
+    deband = F3kdb(radius, threshold, grain).deband(blur)
+    deband = LimitFilter(deband, blur, **lf_args)
+
+    return core.std.MergeDiff(deband, diff)
+
 
 
 def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
@@ -114,69 +137,21 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
 
     :return:            Debanded clip
     """
-    warnings.warn(
-        "lfdeband: 'This function is deprecated, use vardefunc.deband.lfdeband from now on", DeprecationWarning
-    )
-
-    return lfdeband_vardefunc(clip)
-
-
-def dither_bilateral(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None,
-                     radius: Optional[float] = None,
-                     thr: float = 0.35, wmin: float = 1.0,
-                     subspl: float = 0) -> vs.VideoNode:
-    """
-    Dither's Gradfun3 mode 2, for Vapoursynth
-    Not much different from using core.avsw.Eval with Dither_bilateral_multistage,
-    just with normal value rounding and without Dither_limit_dif16
-
-    If you want the rounding to be exactly the same,
-    replace the applicable lines from here: https://pastebin.com/raw/gZKHCFkd
-
-    Default setting of 'radius' changes to reflect the resolution
-
-    Radius auto-adjust: 480p  ->  9
-                        720p  -> 12
-                        810p  -> 13
-                        900p  -> 14
-                        1080p -> 16
-                        2K    -> 20
-                        4K    -> 32
-
-    Basic usage: flt = db.Dither_bilateral(clip, thr=1/3)
-                    flt = mvf.LimitFilter(flt, clip, thr=1/3)
-    """
     if clip.format is None:
-        raise ValueError("Dither_bilateral: 'Variable-format clips not supported'")
+        raise ValueError("lfdeband: 'Variable-format clips not supported'")
 
-    if radius is None:
-        radius = max((clip.width - 1280) / 160 + 12, (clip.height - 720) / 90 + 12)
+    bits = clip.format.bits_per_sample
+    wss, hss = 1 << clip.format.subsampling_w, 1 << clip.format.subsampling_h
+    w, h = clip.width, clip.height
+    dw, dh = round(w / 2), round(h / 2)
 
-    planes = list(range(clip.format.num_planes))
-    y, u, v = [3 if x in planes else 1 for x in range(3)]
+    clip = depth(clip, 16)
+    dsc = core.resize.Spline64(clip, dw-dw % wss, dh-dh % hss)
 
-    thr_1 = round(max(thr * 4.5, 1.25), 1)
-    thr_2 = round(max(thr * 9, 5), 1)
-    subspl_2 = subspl if subspl in (0, 1) else subspl / 2
-    r4 = round(max(radius * 4 / 3, 4))
-    r2 = round(max(radius * 2 / 3, 3))
-    r1 = round(max(radius / 3, 2))
+    d3kdb = F3kdb(radius=30, threshold=80, grain=0).deband(clip)
 
-    clips = [clip.fmtc.nativetostack16()]
-    clip_names = ["c"]
-    ref_t = "c"
-    if ref is not None:
-        ref_s = ref.fmtc.nativetostack16()
-        clips += [ref_s]
-        clip_names += ["ref"]
-        ref_t = "ref"
+    ddif = core.std.MakeDiff(d3kdb, dsc)
 
-    avs_stuff = "c.Dither_bilateral16(radius={r4}, thr={thr_1}, flat=0.75, wmin={wmin}, ref={ref_t}, subspl={subspl},   y={y}, u={u}, v={v})" # noqa
-    avs_stuff += ".Dither_bilateral16(radius={r2}, thr={thr_2}, flat=0.25, wmin={wmin}, ref={ref_t}, subspl={subspl_2}, y={y}, u={u}, v={v})" # noqa
-    avs_stuff += ".Dither_bilateral16(radius={r1}, thr={thr_2}, flat=0.50, wmin={wmin}, ref={ref_t}, subspl={subspl_2}, y={y}, u={u}, v={v})" # noqa
-    avs_stuff = avs_stuff.format(ref_t=ref_t, r4=r4, r2=r2, r1=r1, thr_1=thr_1, thr_2=thr_2, wmin=wmin, subspl=subspl, subspl_2=subspl_2, y=y, u=u, v=v) # noqa
-
-    return core.avsw.Eval(avs_stuff, clips=clips, clip_names=clip_names).fmtc.stack16tonative()
-# TO-DO: Fix this function. Current error: Avisynth 32-bit proxy: command failed
-
-# TO-DO: Port all the other functions in ../legacy/debandshit.py
+    dif = core.resize.Spline64(ddif, w, h)
+    out = core.std.MergeDiff(clip, dif)
+    return depth(out, bits)
