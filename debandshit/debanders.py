@@ -49,10 +49,12 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
     bits = clip.format.bits_per_sample
 
     f3_args: Dict[str, Any] = dict()
-    f3_args |= f3kdb_args
+    if f3kdb_args is not None:
+        f3_args |= f3kdb_args
 
     lf_args: Dict[str, Any] = dict(thr=0.6, elast=3.0, thrc=None)
-    lf_args |= limflt_args
+    if limflt_args is not None:
+        lf_args |= limflt_args
 
     rad1 = round(radius * 4 / 3)
     rad2 = round(radius * 2 / 3)
@@ -73,7 +75,7 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
 
     limit = LimitFilter(flt3, flt2, ref=clip, **lf_args)
 
-    if grain != 0 or grain is not None:
+    if grain:
         grained = F3kdb(grain=grain, **f3_args).grain(limit)
     else:
         grained = limit
@@ -110,10 +112,12 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
         raise ValueError("f3kpf: 'Variable-format clips not supported'")
 
     f3_args: Dict[str, Any] = dict()
-    f3_args |= f3kdb_args
+    if f3kdb_args is not None:
+        f3_args |= f3kdb_args
 
     lf_args: Dict[str, Any] = dict(thr=0.3, elast=2.5, thrc=None)
-    lf_args |= limflt_args
+    if limflt_args is not None:
+        lf_args |= limflt_args
 
     blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     diff = core.std.MakeDiff(clip, blur)

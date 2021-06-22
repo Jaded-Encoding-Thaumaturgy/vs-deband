@@ -25,7 +25,7 @@ class F3kdb:
     def __init__(self,
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-                 sample_mode: int = 2, use_neo: bool = False, **kwargs) -> None:
+                 sample_mode: int = 2, use_neo: bool = False, **kwargs: Any) -> None:
         """ Handle debanding operations onto a clip using a set of configured parameters.
 
         Args:
@@ -150,5 +150,5 @@ class F3kdb:
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
              threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-             sample_mode: int = 2, use_neo: bool = False, **kwargs) -> vs.VideoNode:
+             sample_mode: int = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
     return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
