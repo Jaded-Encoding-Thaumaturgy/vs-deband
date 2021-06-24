@@ -62,8 +62,11 @@ class F3kdb:
         if sample_mode > 2 and not use_neo:
             raise ValueError('deband: "sample_mode" argument should be less or equal to 2 when "use_neo" is false.')
 
-        self.sample_mode = sample_mode
-        self.use_neo = use_neo
+        if sample_mode <= 2 or not use_neo:
+            self.sample_mode = sample_mode
+            self.use_neo = use_neo
+        else:
+            raise ValueError('F3kdb: neo_f3kd is leaking memory, don\'t use it')
 
         self._step = 16 if sample_mode == 2 else 32
 
