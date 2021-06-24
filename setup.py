@@ -7,8 +7,8 @@ with open("requirements.txt") as fh:
     install_requires = fh.read()
 
 NAME = "vs-debandshit"
-# VERSION = "0.4.2"
-RELEASE = "0.4.2"
+
+RELEASE = "0.4.3"
 
 setuptools.setup(
     name=NAME,
