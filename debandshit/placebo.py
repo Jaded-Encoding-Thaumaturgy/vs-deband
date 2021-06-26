@@ -47,7 +47,7 @@ class Placebo:
                                 in a very big change to the brightness level.
                                 It's recommended to either scale this value down or disable it entirely for HDR.
 
-        :param kwargs:          Arguments passed to f3kdb.Deband
+        :param kwargs:          Arguments passed to `placebo.Deband`.
         """
 
         self.radius = radius

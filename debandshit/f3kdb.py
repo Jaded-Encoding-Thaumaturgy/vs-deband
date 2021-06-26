@@ -47,10 +47,15 @@ class F3kdb:
                                   Reference pixels are in the square around current pixel
                                 * SampleMode.ROW: Take 2 pixels as reference pixel
                                   Reference pixels are in the same row of current pixel
+                                  Only `neo_f3kdb.Deband` supports it
                                 * SampleMode.COL_ROW_MEAN: Arithmetic mean of 1 and 3
-                                Reference points are randomly picked within the range
-        :param use_neo:         Use neo_f3kdb.Deband
+                                  Reference points are randomly picked within the range
+                                  Only `neo_f3kdb.Deband` supports it
+        :param use_neo:         Use `neo_f3kdb.Deband`
         :param kwargs:          Arguments passed to f3kdb.Deband
+                                Default are `keep_tv_range=True, output_depth=16`
+                                Read the f3kdb's documentation for more information about them:
+                                https://f3kdb.readthedocs.io/en/latest/usage.html#parameters
         """
         self.radius = radius
 
@@ -60,7 +65,7 @@ class F3kdb:
         self.gry, self.grc = [grain] * 2 if isinstance(grain, int) else grain + [grain[-1]] * (2 - len(grain))
 
         if sample_mode > 2 and not use_neo:
-            raise ValueError('deband: "sample_mode" argument should be less or equal to 2 when "use_neo" is false.')
+            raise ValueError('F3kdb: f3kdb.Deband doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN')
 
         if sample_mode <= 2 or not use_neo:
             self.sample_mode = sample_mode
@@ -133,7 +138,7 @@ class F3kdb:
         return self.deband(clip)
 
     @staticmethod
-    def _trf(n: int, f: List[vs.VideoFrame]) -> vs.VideoFrame:  # noqa: PLW0613
+    def _trf(n: int, f: List[vs.VideoFrame]) -> vs.VideoFrame:
         # neo_f3kdb nukes frame props
         (fout := f[0].copy()).props.update(f[1].props)
         return fout
