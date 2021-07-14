@@ -37,6 +37,11 @@ class F3kdb:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
+        Both f3kdb and neo_f3kdb actually change their strength at 1 + 16 * n for SampleMode.SQUARE
+        and 1 + 32 * n for SampleMode.COLUMN, SampleMode.ROW or SampleMode.COL_ROW_MEAN.
+        This function is aiming to average n and n + 1 strength for a better accuracy.
+        Original function written by Z4ST1N, modified by Vardë.
+
         :param radius:          Banding detection range
         :param threshold:       Banding detection threshold(s) for planes
         :param grain:           Specifies amount of grains added in the last debanding stage
