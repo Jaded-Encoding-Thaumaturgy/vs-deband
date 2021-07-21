@@ -1,4 +1,4 @@
-import setuptools
+from setuptools import setup
 
 with open("README.md") as fh:
     long_description = fh.read()
@@ -10,7 +10,7 @@ NAME = "vs-debandshit"
 
 RELEASE = "0.4.4"
 
-setuptools.setup(
+setup(
     name=NAME,
     version=RELEASE,
     author="LightArrowsEXE",
@@ -29,5 +29,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    zip_safe=False,
     python_requires='>=3.9',
 )
