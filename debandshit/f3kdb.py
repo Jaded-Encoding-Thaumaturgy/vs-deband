@@ -6,7 +6,7 @@ import vapoursynth as vs
 core = vs.core
 
 
-__all__ = ['SampleMode', 'F3kdb', 'dumb3kdb']
+__all__ = ['SampleMode', 'F3kdb']
 
 
 class SampleMode(IntEnum):
@@ -139,9 +139,3 @@ class F3kdb:
     @staticmethod
     def _pick_f3kdb(neo: bool, *args: Any, **kwargs: Any) -> vs.VideoNode:
         return core.neo_f3kdb.Deband(*args, **kwargs) if neo else core.f3kdb.Deband(*args, **kwargs)
-
-
-def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
-             threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-             sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
-    return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
