@@ -10,6 +10,7 @@ import vapoursynth as vs
 from vsutil import depth
 
 from .f3kdb import F3kdb, SampleMode
+from .placebo import Placebo
 
 core = vs.core
 
@@ -163,3 +164,9 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
     dif = core.resize.Spline64(ddif, w, h)
     out = core.std.MergeDiff(clip, dif)
     return depth(out, bits)
+
+
+def placebo_deband(clip: vs.VideoNode, radius: float = 16.0, threshold: Union[float, List[float]] = 4.0,
+                   iterations: int = 1, grain: Union[float, List[float]] = 6.0, **kwargs: Any) -> vs.VideoNode:
+    """Small convenience function for calling Placebo().deband()."""
+    return Placebo(radius, threshold, iterations, grain, **kwargs).deband(clip)
