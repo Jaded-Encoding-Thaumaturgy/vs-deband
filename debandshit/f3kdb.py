@@ -1,19 +1,14 @@
-from enum import IntEnum
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Literal, Union
 
 import vapoursynth as vs
 
 core = vs.core
 
 
-__all__ = ['SampleMode', 'F3kdb']
+__all__ = ['SAMPLEMODE', 'F3kdb']
 
 
-class SampleMode(IntEnum):
-    COLUMN = 1
-    SQUARE = 2
-    ROW = 3
-    COL_ROW_MEAN = 4
+SAMPLEMODE = Literal[1, 2, 3, 4]
 
 
 class F3kdb:
@@ -24,7 +19,7 @@ class F3kdb:
     thcr: int
     gry: int
     grc: int
-    sample_mode: SampleMode
+    sample_mode: SAMPLEMODE
     use_neo: bool
     f3kdb_args: Dict[str, Any]
 
@@ -33,7 +28,7 @@ class F3kdb:
     def __init__(self,
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-                 sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> None:
+                 sample_mode: SAMPLEMODE = 2, use_neo: bool = False, **kwargs: Any) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
