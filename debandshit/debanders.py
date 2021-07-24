@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 import vapoursynth as vs
 from vsutil import depth
 
-from .f3kdb import SAMPLEMODE, F3kdb
+from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo
 
 core = vs.core
@@ -19,7 +19,7 @@ __all__ = ['dumb3kdb', 'f3kbilateral', 'f3kpf', 'lfdeband', 'placebo_deband']
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
              threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-             sample_mode: SAMPLEMODE = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
+             sample_mode: Union[SAMPLEMODE, SampleMode] = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
     """Small convenience function for calling F3kdb().deband()."""
     return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
 

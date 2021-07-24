@@ -1,3 +1,4 @@
+from enum import IntEnum
 from typing import Any, Dict, List, Literal, Union
 
 import vapoursynth as vs
@@ -5,10 +6,17 @@ import vapoursynth as vs
 core = vs.core
 
 
-__all__ = ['SAMPLEMODE', 'F3kdb']
+__all__ = ['SAMPLEMODE', 'F3kdb', 'SampleMode']
 
 
 SAMPLEMODE = Literal[1, 2, 3, 4]
+
+
+class SampleMode(IntEnum):
+    COLUMN = 1
+    SQUARE = 2
+    ROW = 3
+    COL_ROW_MEAN = 4
 
 
 class F3kdb:
@@ -19,7 +27,7 @@ class F3kdb:
     thcr: int
     gry: int
     grc: int
-    sample_mode: SAMPLEMODE
+    sample_mode: int
     use_neo: bool
     f3kdb_args: Dict[str, Any]
 
@@ -28,7 +36,7 @@ class F3kdb:
     def __init__(self,
                  radius: int = 16,
                  threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-                 sample_mode: SAMPLEMODE = 2, use_neo: bool = False, **kwargs: Any) -> None:
+                 sample_mode: Union[SAMPLEMODE, SampleMode] = 2, use_neo: bool = False, **kwargs: Any) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
@@ -41,14 +49,14 @@ class F3kdb:
         :param threshold:       Banding detection threshold(s) for planes
         :param grain:           Specifies amount of grains added in the last debanding stage
         :param sample_mode:     Valid modes are:
-                                * SampleMode.COLUMN: Take 2 pixels as reference pixel
+                                * SampleMode.COLUMN or 1: Take 2 pixels as reference pixel
                                   Reference pixels are in the same column of current pixel
-                                * SampleMode.SQUARE: Take 4 pixels as reference pixel
+                                * SampleMode.SQUARE or 2: Take 4 pixels as reference pixel
                                   Reference pixels are in the square around current pixel
-                                * SampleMode.ROW: Take 2 pixels as reference pixel
+                                * SampleMode.ROW or 3: Take 2 pixels as reference pixel
                                   Reference pixels are in the same row of current pixel
                                   Only `neo_f3kdb.Deband` supports it
-                                * SampleMode.COL_ROW_MEAN: Arithmetic mean of 1 and 3
+                                * SampleMode.COL_ROW_MEAN or 4: Arithmetic mean of 1 and 3
                                   Reference points are randomly picked within the range
                                   Only `neo_f3kdb.Deband` supports it
         :param use_neo:         Use `neo_f3kdb.Deband`
