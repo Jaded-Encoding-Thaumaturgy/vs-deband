@@ -52,14 +52,14 @@ class Placebo:
 
         self.radius = radius
 
-        if isinstance(threshold, float):
+        if isinstance(threshold, (float, int)):
             self.threshold = [threshold] * 3
         else:
             self.threshold = threshold + [threshold[-1]] * (3 - len(threshold))
 
         self.iterations = iterations
 
-        if isinstance(grain, float):
+        if isinstance(grain, (float, int)):
             self.grain = [grain] * 3
         else:
             self.grain = grain + [grain[-1]] * (3 - len(grain))
