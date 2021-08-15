@@ -132,7 +132,7 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     diff = core.std.MakeDiff(clip, blur)
 
-    deband = F3kdb(radius, threshold, grain).deband(blur)
+    deband = F3kdb(radius, threshold, grain, **f3_args).deband(blur)
     deband = LimitFilter(deband, blur, **lf_args)
 
     return core.std.MergeDiff(deband, diff)
