@@ -109,7 +109,8 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     :param clip:        Input clip
     :param radius:      Banding detection range
     :param threshold:   Banding detection thresholds for multiple planes
-    :param kwargs:      Arguments passed to mvsfunc.LimitFilter
+    :param f3kdb_args:  Arguments passed to F3kdb constructor
+    :param limflt_args: Arguments passed to mvsfunc.LimitFilter
 
     :return:            Debanded clip
     """
