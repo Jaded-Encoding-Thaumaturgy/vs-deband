@@ -4,6 +4,8 @@ This repository is intended to be a maintained version of `debandshit` until [Z4
 
 The original v0.3.0 of `debandshit.py` that this is built on from can be found [here](https://pastebin.com/NGFBhCCn).
 
+For further support, drop by `#debandshit` in the [IEW Discord server](https://discord.gg/qxTxVJGtst).
+
 ## How to install
 
 If you have the old `debandshit.py` module,
