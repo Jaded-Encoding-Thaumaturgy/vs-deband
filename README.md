@@ -27,3 +27,4 @@ debandshit depends on the following third-party scripts:
 And the following VapourSynth libraries:
 
 - [fmtconv](https://github.com/EleonoreMizo/fmtconv)
+- [vs-placebo](https://github.com/Lypheo/vs-placebo)
