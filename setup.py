@@ -8,7 +8,7 @@ with open("requirements.txt") as fh:
 
 NAME = "vs-debandshit"
 
-RELEASE = "0.4.4"
+RELEASE = "0.4.5"
 
 setup(
     name=NAME,
