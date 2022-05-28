@@ -139,16 +139,25 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     return core.std.MergeDiff(deband, diff)
 
 
-def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
+def lfdeband(clip: vs.VideoNode, radius: int = 30,
+             threshold: Union[int, List[int]] = 80, grain: Union[int, List[int]] = 0,
+             f3kdb_args: Optional[Dict[str, Any]] = None) -> vs.VideoNode:
     """
     A simple debander ported from AviSynth.
 
     :param clip:        Input clip
+    :param radius:      Banding detection range
+    :param threshold:   Banding detection thresholds for multiple planes
+    :param f3kdb_args:  Arguments passed to F3kdb constructor
 
     :return:            Debanded clip
     """
     if clip.format is None:
         raise ValueError("lfdeband: 'Variable-format clips not supported'")
+
+    f3_args: Dict[str, Any] = dict()
+    if f3kdb_args is not None:
+        f3_args |= f3kdb_args
 
     bits = clip.format.bits_per_sample
     wss, hss = 1 << clip.format.subsampling_w, 1 << clip.format.subsampling_h
@@ -158,7 +167,7 @@ def lfdeband(clip: vs.VideoNode) -> vs.VideoNode:
     clip = depth(clip, 16)
     dsc = core.resize.Spline64(clip, dw-dw % wss, dh-dh % hss)
 
-    d3kdb = F3kdb(radius=30, threshold=80, grain=0).deband(clip)
+    d3kdb = F3kdb(radius, threshold, grain, **f3_args).deband(dsc)
 
     ddif = core.std.MakeDiff(d3kdb, dsc)
 
