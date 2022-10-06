@@ -7,7 +7,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 import vapoursynth as vs
-from vsutil import depth
+from vstools import depth
 
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo

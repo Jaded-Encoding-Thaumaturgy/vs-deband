@@ -1,10 +1,7 @@
 from enum import IntEnum
 from typing import Any, Dict, List, Literal, Union
 
-import vapoursynth as vs
-
-core = vs.core
-
+from vstools import VariableFormatError, core, vs, CustomValueError
 
 __all__ = ['SAMPLEMODE', 'F3kdb', 'SampleMode']
 
@@ -73,7 +70,10 @@ class F3kdb:
         self.gry, self.grc = [grain] * 2 if isinstance(grain, int) else grain + [grain[-1]] * (2 - len(grain))
 
         if sample_mode > 2 and not use_neo:
-            raise ValueError('F3kdb: f3kdb.Deband doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN')
+            raise CustomValueError(
+                'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
+                self.__class__.deband
+            )
 
         self.sample_mode = sample_mode
         self.use_neo = use_neo
@@ -91,7 +91,7 @@ class F3kdb:
         :return:                Debanded clip
         """
         if clip.format is None:
-            raise ValueError('deband: Variable format not allowed!')
+            raise VariableFormatError(self.__class__.deband, 'Variable format not allowed!')
 
         if self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
             deband = self._pick_f3kdb(self.use_neo,
