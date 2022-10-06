@@ -1,10 +1,6 @@
 from typing import Any, Dict, List, Union
 
-import vapoursynth as vs
-from vsutil import join, split
-
-core = vs.core
-
+from vstools import VariableFormatError, join, split, vs
 
 __all__ = ['Placebo']
 
@@ -74,7 +70,7 @@ class Placebo:
         :return:                Debanded clip
         """
         if clip.format is None:
-            raise ValueError('deband: Variable format not allowed!')
+            raise VariableFormatError(self.__class__.deband, 'Variable format not allowed!')
 
         debs = [
             p.placebo.Deband(1, self.iterations, thr, self.radius, gra, **self.placebodb_args)
