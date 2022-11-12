@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 from vstools import VariableFormatError, join, split, vs
 
-__all__ = ['Placebo']
+__all__ = [
+    'Placebo'
+]
 
 
 class Placebo:

@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 from enum import IntEnum
 from typing import Any, Literal
 
 from vstools import CustomValueError, VariableFormatError, core, vs
 
-__all__ = ['SAMPLEMODE', 'F3kdb', 'SampleMode']
+__all__ = [
+    'SampleMode', 'SAMPLEMODE',
+
+    'F3kdb'
+]
 
 
 SAMPLEMODE = Literal[1, 2, 3, 4]
