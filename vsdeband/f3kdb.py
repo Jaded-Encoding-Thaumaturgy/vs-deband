@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import Any
 
-from vstools import CustomValueError, check_variable, core, inject_self, vs
+from vstools import CustomValueError, check_variable, core, inject_self, vs, normalize_seq, VSFunction
 
 from .abstract import Debander, Grainer
 
@@ -39,7 +39,7 @@ class F3kdb(Debander, Grainer):
         self,
         radius: int = 16,
         threshold: int | list[int] = 30, grain: int | list[int] = 0,
-        sample_mode: SampleMode = 2, use_neo: bool = False,  **kwargs: Any
+        sample_mode: SampleMode = 2, use_neo: bool = False, **kwargs: Any
     ) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
@@ -71,10 +71,8 @@ class F3kdb(Debander, Grainer):
         """
         self.radius = radius
 
-        th_s = [threshold] * 3 if isinstance(threshold, int) else threshold + [threshold[-1]] * (3 - len(threshold))
-        self.thy, self.thcb, self.thcr = [max(1, x) for x in th_s]
-
-        self.gry, self.grc = [grain] * 2 if isinstance(grain, int) else grain + [grain[-1]] * (2 - len(grain))
+        self.thy, self.thcb, self.thcr = [max(1, x) for x in normalize_seq(threshold)]
+        self.gry, self.grc = normalize_seq(grain, 2)
 
         if sample_mode > 2 and not use_neo:
             raise CustomValueError(
@@ -84,6 +82,7 @@ class F3kdb(Debander, Grainer):
 
         self.sample_mode = sample_mode
         self.use_neo = use_neo
+        self.new_neo = self.use_neo and ('y2' in core.neo_f3kdb.Deband.__signature__.parameters)
 
         self._step = 16 if sample_mode == 2 else 32
 
@@ -100,23 +99,21 @@ class F3kdb(Debander, Grainer):
 
         assert check_variable(clip, self.__class__.deband)
 
+        kwargs = dict[str, Any](
+            range=self.radius,
+            grainy=self.gry,
+            grainc=self.grc,
+            sample_mode=self.sample_mode,
+        ) | self.f3kdb_args
+
         if self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
-            deband = self._pick_f3kdb(
-                self.use_neo, clip, self.radius, self.thy, self.thcb, self.thcr,
-                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
-            )
+            deband = self._f3kdb_plugin(clip, y=self.thy, cb=self.thcb, cr=self.thcr, **kwargs)
         else:
             loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
             hiy, hicb, hicr = [lo + self._step for lo in [loy, locb, locr]]
 
-            lo_clip = self._pick_f3kdb(
-                self.use_neo, clip, self.radius, loy, locb, locr,
-                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
-            )
-            hi_clip = self._pick_f3kdb(
-                self.use_neo, clip, self.radius, hiy, hicb, hicr,
-                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
-            )
+            lo_clip = self._f3kdb_plugin(clip, y=loy, cb=locb, cr=locr, **kwargs)
+            hi_clip = self._f3kdb_plugin(clip, y=hiy, cb=hicb, cr=hicr, **kwargs)
 
             if clip.format.color_family == vs.GRAY:
                 weight = [
@@ -144,6 +141,6 @@ class F3kdb(Debander, Grainer):
         self.thy, self.thcr, self.thcb = (1, ) * 3
         return self.deband(clip)
 
-    @staticmethod
-    def _pick_f3kdb(neo: bool, *args: Any, **kwargs: Any) -> vs.VideoNode:
-        return core.neo_f3kdb.Deband(*args, **kwargs) if neo else core.f3kdb.Deband(*args, **kwargs)
+    @property
+    def _f3kdb_plugin(self) -> VSFunction:
+        return core.neo_f3kdb.Deband if self.use_neo else core.f3kdb.Deband
