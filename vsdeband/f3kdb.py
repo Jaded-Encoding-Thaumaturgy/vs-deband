@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import Any
 
-from vstools import CustomValueError, VariableFormatError, core, inject_self, vs
+from vstools import CustomValueError, check_variable, core, inject_self, vs
 
 from .abstract import Debander, Grainer
 
@@ -35,10 +35,12 @@ class F3kdb(Debander, Grainer):
 
     _step: int
 
-    def __init__(self,
-                 radius: int = 16,
-                 threshold: int | list[int] = 30, grain: int | list[int] = 0,
-                 sample_mode: SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        radius: int = 16,
+        threshold: int | list[int] = 30, grain: int | list[int] = 0,
+        sample_mode: SampleMode = 2, use_neo: bool = False,  **kwargs: Any
+    ) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
@@ -85,8 +87,7 @@ class F3kdb(Debander, Grainer):
 
         self._step = 16 if sample_mode == 2 else 32
 
-        self.f3kdb_args = dict(keep_tv_range=True, output_depth=16)
-        self.f3kdb_args |= kwargs
+        self.f3kdb_args = dict(keep_tv_range=True, output_depth=16) | kwargs
 
     @inject_self
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
@@ -96,29 +97,26 @@ class F3kdb(Debander, Grainer):
         :param clip:            Source clip
         :return:                Debanded clip
         """
-        if clip.format is None:
-            raise VariableFormatError(self.__class__.deband, 'Variable format not allowed!')
+
+        assert check_variable(clip, self.__class__.deband)
 
         if self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
-            deband = self._pick_f3kdb(self.use_neo,
-                                      clip, self.radius,
-                                      self.thy, self.thcb, self.thcr,
-                                      self.gry, self.grc,
-                                      self.sample_mode, **self.f3kdb_args)
+            deband = self._pick_f3kdb(
+                self.use_neo, clip, self.radius, self.thy, self.thcb, self.thcr,
+                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
+            )
         else:
             loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
             hiy, hicb, hicr = [lo + self._step for lo in [loy, locb, locr]]
 
-            lo_clip = self._pick_f3kdb(self.use_neo,
-                                       clip, self.radius,
-                                       loy, locb, locr,
-                                       self.gry, self.grc,
-                                       self.sample_mode, **self.f3kdb_args)
-            hi_clip = self._pick_f3kdb(self.use_neo,
-                                       clip, self.radius,
-                                       hiy, hicb, hicr,
-                                       self.gry, self.grc,
-                                       self.sample_mode, **self.f3kdb_args)
+            lo_clip = self._pick_f3kdb(
+                self.use_neo, clip, self.radius, loy, locb, locr,
+                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
+            )
+            hi_clip = self._pick_f3kdb(
+                self.use_neo, clip, self.radius, hiy, hicb, hicr,
+                self.gry, self.grc, self.sample_mode, **self.f3kdb_args
+            )
 
             if clip.format.color_family == vs.GRAY:
                 weight = [
