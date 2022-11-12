@@ -56,11 +56,14 @@ class PlaceboDither(CustomIntEnum):
         if self is PlaceboDither.NONE:
             return dict(dither=False, dither_algo=0)
         return dict(dither=True, dither_algo=self.value)
+
+
+@dataclass
 class Placebo(Debander):
-    radius: float
-    thrs: list[float]
-    iterations: int
-    grain: list[float]
+    radius: float = 16.0
+    threshold: float | list[float] = 4.0
+    iterations: int = 1
+    grain: float | list[float] = 6.0
 
     placebodb_args: dict[str, Any]
 
