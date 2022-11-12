@@ -13,7 +13,7 @@ requirements = Path('requirements.txt').read_text()
 
 
 setuptools.setup(
-    name=package_name,
+    name=f'vs-{package_name}',
     version=meta['__version__'],
     author=meta['__author_name__'],
     author_email=meta['__author_email__'],
