@@ -6,13 +6,10 @@
 """
 from typing import Any, Dict, List, Optional, Union
 
-import vapoursynth as vs
-from vstools import depth
+from vstools import core, depth, vs
 
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo
-
-core = vs.core
 
 __all__ = ['dumb3kdb', 'f3kbilateral', 'f3kpf', 'lfdeband', 'placebo_deband']
 

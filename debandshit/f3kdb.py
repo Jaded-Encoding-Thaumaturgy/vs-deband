@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import Any, Dict, List, Literal, Union
 
-from vstools import VariableFormatError, core, vs, CustomValueError
+from vstools import CustomValueError, VariableFormatError, core, vs
 
 __all__ = ['SAMPLEMODE', 'F3kdb', 'SampleMode']
 
