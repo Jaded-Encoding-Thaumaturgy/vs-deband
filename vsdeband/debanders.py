@@ -11,9 +11,7 @@ from .placebo import Placebo
 __all__ = [
     'dumb3kdb', 'f3kbilateral', 'f3kpf',
 
-    'lfdeband',
-
-    'placebo_deband'
+    'lfdeband'
 ]
 
 
@@ -156,9 +154,3 @@ def lfdeband(clip: vs.VideoNode, radius: int = 30,
     dif = core.resize.Spline64(ddif, w, h)
     out = core.std.MergeDiff(clip, dif)
     return depth(out, bits)
-
-
-def placebo_deband(clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
-                   iterations: int = 1, grain: float | list[float] = 6.0, **kwargs: Any) -> vs.VideoNode:
-    """Small convenience function for calling Placebo().deband()."""
-    return Placebo(radius, threshold, iterations, grain, **kwargs).deband(clip)
