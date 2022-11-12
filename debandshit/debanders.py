@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from vstools import KwargsT, core, depth, vs
+from vsrgtools import limit_filter
 
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo
@@ -40,24 +41,17 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
     This function is more of a last resort for extreme banding.
     Recommend values are ~40-60 for y and c strengths.
 
-    Dependencies:
-    * mvsfunc
-
     :param clip:        Input clip
     :param radius:      Same as F3kdb constructor.
     :param threshold:   Same as F3kdb constructor.
     :param grain:       Same as F3kdb constructor.
-                        It happens after mvsfunc.LimitFilter
+                        It happens after vsrgtools.limit_filter
                         and call another instance of F3kdb if != 0.
     :f3kdb_args:        Same as F3kdb kwargs constructor.
-    :lf_args:           Arguments passed to mvsfunc.LimitFilter.
+    :lf_args:           Arguments passed to vsrgtools.limit_filter.
 
     :return:            Debanded clip
     """
-    try:
-        from mvsfunc import LimitFilter
-    except ModuleNotFoundError as mod_err:
-        raise ModuleNotFoundError("f3kbilateral: missing dependency 'mvsfunc'") from mod_err
 
     if clip.format is None:
         raise ValueError("f3kbilateral: 'Variable-format clips not supported'")
@@ -89,7 +83,7 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
     flt2 = db2.deband(flt1)
     flt3 = db3.deband(flt2)
 
-    limit = LimitFilter(flt3, flt2, ref=clip, **lf_args)
+    limit = limit_filter(flt3, flt2, clip, **lf_args)
 
     if grain:
         grained = F3kdb(grain=grain, **f3_args).grain(limit)
@@ -109,21 +103,14 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     Since the prefilter is a straight gaussian+average blur, f3kdb's effect becomes very strong, very fast.
     Functions more or less like gradfun3 without the detail mask.
 
-    Dependencies:
-    * mvsfunc
-
     :param clip:        Input clip
     :param radius:      Banding detection range
     :param threshold:   Banding detection thresholds for multiple planes
     :param f3kdb_args:  Arguments passed to F3kdb constructor
-    :param limflt_args: Arguments passed to mvsfunc.LimitFilter
+    :param limflt_args: Arguments passed to vsrgtools.limit_filter
 
     :return:            Debanded clip
     """
-    try:
-        from mvsfunc import LimitFilter
-    except ModuleNotFoundError as mod_err:
-        raise ModuleNotFoundError("f3kpf: missing dependency 'mvsfunc'") from mod_err
 
     if clip.format is None:
         raise ValueError("f3kpf: 'Variable-format clips not supported'")
@@ -140,7 +127,7 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     diff = core.std.MakeDiff(clip, blur)
 
     deband = F3kdb(radius, threshold, grain, **f3_args).deband(blur)
-    deband = LimitFilter(deband, blur, **lf_args)
+    deband = limit_filter(deband, blur, **lf_args)
 
     return core.std.MergeDiff(deband, diff)
 
