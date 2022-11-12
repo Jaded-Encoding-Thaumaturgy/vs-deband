@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from vstools import VariableFormatError, join, split, vs
 
@@ -7,15 +7,15 @@ __all__ = ['Placebo']
 
 class Placebo:
     radius: float
-    thrs: List[float]
+    thrs: list[float]
     iterations: int
-    grain: List[float]
+    grain: list[float]
 
-    placebodb_args: Dict[str, Any]
+    placebodb_args: dict[str, Any]
 
     def __init__(self,
-                 radius: float = 16.0, threshold: Union[float, List[float]] = 4.0,
-                 iterations: int = 1, grain: Union[float, List[float]] = 6.0,
+                 radius: float = 16.0, threshold: float | list[float] = 4.0,
+                 iterations: int = 1, grain: float | list[float] = 6.0,
                  **kwargs: Any) -> None:
         """
         Wrapper for placebo.Deband

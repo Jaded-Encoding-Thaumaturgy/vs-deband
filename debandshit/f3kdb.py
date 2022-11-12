@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, Literal
 
 from vstools import CustomValueError, VariableFormatError, core, vs
 
@@ -26,14 +26,14 @@ class F3kdb:
     grc: int
     sample_mode: int
     use_neo: bool
-    f3kdb_args: Dict[str, Any]
+    f3kdb_args: dict[str, Any]
 
     _step: int
 
     def __init__(self,
                  radius: int = 16,
-                 threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-                 sample_mode: Union[SAMPLEMODE, SampleMode] = 2, use_neo: bool = False, **kwargs: Any) -> None:
+                 threshold: int | list[int] = 30, grain: int | list[int] = 0,
+                 sample_mode: SAMPLEMODE | SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 
