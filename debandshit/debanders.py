@@ -4,6 +4,9 @@
     This used to be the `debandshit` module written by Z4ST1N,
     with some functions that were rarely (if ever) used removed because I can't reasonably maintain them.
 """
+
+from __future__ import annotations
+
 from typing import Any
 
 from vstools import KwargsT, core, depth, vs
@@ -11,7 +14,13 @@ from vstools import KwargsT, core, depth, vs
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo
 
-__all__ = ['dumb3kdb', 'f3kbilateral', 'f3kpf', 'lfdeband', 'placebo_deband']
+__all__ = [
+    'dumb3kdb', 'f3kbilateral', 'f3kpf',
+
+    'lfdeband',
+
+    'placebo_deband'
+]
 
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
