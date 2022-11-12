@@ -30,5 +30,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     zip_safe=False,
-    python_requires='>=3.9',
+    python_requires='>=3.10',
 )
