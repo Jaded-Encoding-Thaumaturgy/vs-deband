@@ -4,9 +4,9 @@
     This used to be the `debandshit` module written by Z4ST1N,
     with some functions that were rarely (if ever) used removed because I can't reasonably maintain them.
 """
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-from vstools import core, depth, vs
+from vstools import KwargsT, core, depth, vs
 
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
 from .placebo import Placebo
@@ -15,16 +15,16 @@ __all__ = ['dumb3kdb', 'f3kbilateral', 'f3kpf', 'lfdeband', 'placebo_deband']
 
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
-             threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-             sample_mode: Union[SAMPLEMODE, SampleMode] = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
+             threshold: int | list[int] = 30, grain: int | list[int] = 0,
+             sample_mode: SAMPLEMODE | SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
     """Small convenience function for calling F3kdb().deband()."""
     return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
 
 
 def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
-                 threshold: Union[int, List[int]] = 65, grain: Union[int, List[int]] = 0,
-                 f3kdb_args: Optional[Dict[str, Any]] = None,
-                 limflt_args: Optional[Dict[str, Any]] = None) -> vs.VideoNode:
+                 threshold: int | list[int] = 65, grain: int | list[int] = 0,
+                 f3kdb_args: KwargsT | None = None,
+                 limflt_args: KwargsT | None = None) -> vs.VideoNode:
     """
     f3kbilateral: f3kdb multistage bilateral-esque filter from debandshit.
 
@@ -55,11 +55,11 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
 
     bits = clip.format.bits_per_sample
 
-    f3_args: Dict[str, Any] = dict()
+    f3_args: KwargsT = dict()
     if f3kdb_args is not None:
         f3_args |= f3kdb_args
 
-    lf_args: Dict[str, Any] = dict(thr=0.6, elast=3.0, thrc=None)
+    lf_args: KwargsT = dict(thr=0.6, elast=3.0, thrc=None)
     if limflt_args is not None:
         lf_args |= limflt_args
 
@@ -91,9 +91,9 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
 
 
 def f3kpf(clip: vs.VideoNode, radius: int = 16,
-          threshold: Union[int, List[int]] = 30, grain: Union[int, List[int]] = 0,
-          f3kdb_args: Optional[Dict[str, Any]] = None,
-          limflt_args: Optional[Dict[str, Any]] = None) -> vs.VideoNode:
+          threshold: int | list[int] = 30, grain: int | list[int] = 0,
+          f3kdb_args: KwargsT | None = None,
+          limflt_args: KwargsT | None = None) -> vs.VideoNode:
     """
     f3kdb with a simple prefilter by mawen1250 - https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.
 
@@ -119,11 +119,11 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     if clip.format is None:
         raise ValueError("f3kpf: 'Variable-format clips not supported'")
 
-    f3_args: Dict[str, Any] = dict()
+    f3_args: KwargsT = dict()
     if f3kdb_args is not None:
         f3_args |= f3kdb_args
 
-    lf_args: Dict[str, Any] = dict(thr=0.3, elast=2.5, thrc=None)
+    lf_args: KwargsT = dict(thr=0.3, elast=2.5, thrc=None)
     if limflt_args is not None:
         lf_args |= limflt_args
 
@@ -137,7 +137,7 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
 
 
 def lfdeband(clip: vs.VideoNode, radius: int = 30,
-             threshold: Union[int, List[int]] = 80, grain: Union[int, List[int]] = 0,
+             threshold: int | list[int] = 80, grain: int | list[int] = 0,
              **f3kdb_args: Any) -> vs.VideoNode:
     """
     A simple debander ported from AviSynth.
@@ -169,7 +169,7 @@ def lfdeband(clip: vs.VideoNode, radius: int = 30,
     return depth(out, bits)
 
 
-def placebo_deband(clip: vs.VideoNode, radius: float = 16.0, threshold: Union[float, List[float]] = 4.0,
-                   iterations: int = 1, grain: Union[float, List[float]] = 6.0, **kwargs: Any) -> vs.VideoNode:
+def placebo_deband(clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
+                   iterations: int = 1, grain: float | list[float] = 6.0, **kwargs: Any) -> vs.VideoNode:
     """Small convenience function for calling Placebo().deband()."""
     return Placebo(radius, threshold, iterations, grain, **kwargs).deband(clip)
