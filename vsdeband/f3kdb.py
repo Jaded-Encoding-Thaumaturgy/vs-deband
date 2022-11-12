@@ -3,7 +3,9 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import Any, Literal
 
-from vstools import CustomValueError, VariableFormatError, core, vs
+from vstools import CustomValueError, VariableFormatError, core, inject_self, vs
+
+from .abstract import Debander, Grainer
 
 __all__ = [
     'SampleMode', 'SAMPLEMODE',
@@ -22,7 +24,7 @@ class SampleMode(IntEnum):
     COL_ROW_MEAN = 4
 
 
-class F3kdb:
+class F3kdb(Debander, Grainer):
     """f3kdb object."""
     radius: int
     thy: int
@@ -89,6 +91,7 @@ class F3kdb:
         self.f3kdb_args = dict(keep_tv_range=True, output_depth=16)
         self.f3kdb_args |= kwargs
 
+    @inject_self
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
         """
         Main deband function
@@ -135,6 +138,7 @@ class F3kdb:
 
         return deband
 
+    @inject_self
     def grain(self, clip: vs.VideoNode) -> vs.VideoNode:
         """
         Convenience function that set thresholds to 1 (basically it doesn't deband)

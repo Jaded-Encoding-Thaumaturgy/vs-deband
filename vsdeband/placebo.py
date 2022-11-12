@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from vstools import VariableFormatError, join, split, vs
+from vstools import VariableFormatError, inject_self, join, split, vs
+
+from .abstract import Debander
 
 __all__ = [
     'Placebo'
 ]
 
 
-class Placebo:
+class Placebo(Debander):
     radius: float
     thrs: list[float]
     iterations: int
@@ -66,6 +68,7 @@ class Placebo:
 
         self.placebodb_args = kwargs
 
+    @inject_self
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
         """
         Main deband function
