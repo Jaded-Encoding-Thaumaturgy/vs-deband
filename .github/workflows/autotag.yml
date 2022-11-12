@@ -16,7 +16,7 @@ jobs:
 
       - name: Get version number
         run: |
-          echo "CURR_VER=v$(python -c "import runpy;runpy.run_path('debandshit/_metadata.py', None, '__github__')")" >> $GITHUB_ENV
+          echo "CURR_VER=v$(python -c "import runpy;runpy.run_path('vsdeband/_metadata.py', None, '__github__')")" >> $GITHUB_ENV
       - name: Check if version exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
