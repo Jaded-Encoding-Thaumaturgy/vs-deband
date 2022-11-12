@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import Any, Literal
+from typing import Any
 
 from vstools import CustomValueError, VariableFormatError, core, inject_self, vs
 
 from .abstract import Debander, Grainer
 
 __all__ = [
-    'SampleMode', 'SAMPLEMODE',
+    'SampleMode',
 
     'F3kdb'
 ]
-
-
-SAMPLEMODE = Literal[1, 2, 3, 4]
 
 
 class SampleMode(IntEnum):
@@ -41,7 +38,7 @@ class F3kdb(Debander, Grainer):
     def __init__(self,
                  radius: int = 16,
                  threshold: int | list[int] = 30, grain: int | list[int] = 0,
-                 sample_mode: SAMPLEMODE | SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> None:
+                 sample_mode: SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
 

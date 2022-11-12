@@ -6,7 +6,6 @@ from vstools import KwargsT, core, depth, vs
 from vsrgtools import limit_filter
 
 from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
-from .placebo import Placebo
 
 __all__ = [
     'dumb3kdb', 'f3kbilateral', 'f3kpf',
