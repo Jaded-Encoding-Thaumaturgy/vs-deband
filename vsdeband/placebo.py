@@ -60,19 +60,19 @@ class PlaceboDither(CustomIntEnum):
 
 @dataclass
 class Placebo(Debander):
-    radius: float = 16.0
-    threshold: float | list[float] = 4.0
-    iterations: int = 1
-    grain: float | list[float] = 6.0
+    radius: float | None = None
+    threshold: float | list[float] | None = None
+    iterations: int | None = None
+    grain: float | list[float] | None = None
 
-    dither: PlaceboDither = PlaceboDither.DEFAULT
-    renderer: bool = False
+    dither: PlaceboDither | None = None
+    renderer: bool | None = None
 
     @inject_self
     def deband(
-        self, clip: vs.VideoNode, radius: float | None = None, threshold: float | list[float] | None = None,
-        iterations: int | None = None, grain: float | list[float] | None = None, dither: PlaceboDither | None = None,
-        renderer: bool | None = None
+        self, clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
+        iterations: int = 1, grain: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT,
+        renderer: bool = False
     ) -> vs.VideoNode:
         """
         Main deband function, wrapper for `placebo.Deband <https:/github.com/Lypheo/vs-placebo#vs-placebo>`_
@@ -104,12 +104,12 @@ class Placebo(Debander):
 
         assert check_variable(clip, self.__class__.deband)
 
-        radius = fallback(radius, self.radius)
-        threshold = normalize_seq(fallback(threshold, self.threshold))
-        iterations = fallback(iterations, self.iterations)
-        grain = normalize_seq(fallback(grain, self.grain))
-        dither = fallback(dither, self.dither)
-        renderer = fallback(renderer, self.renderer)
+        radius = fallback(self.radius, radius)
+        threshold = normalize_seq(fallback(self.threshold, threshold))
+        iterations = fallback(self.iterations, iterations)
+        grain = normalize_seq(fallback(self.grain, grain))
+        dither = fallback(self.dither, dither)
+        renderer = fallback(self.renderer, renderer)
 
         debs = [
             p.placebo.Deband(1, iterations, thr, radius, gra, **dither.placebo_args, renderer_api=renderer)
