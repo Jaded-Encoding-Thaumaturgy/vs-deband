@@ -110,37 +110,50 @@ def pref_deband(
 
 
 def lfdeband(
-    clip: vs.VideoNode, radius: int = 30,
-    threshold: int | list[int] = 80, grain: int | list[int] = 0,
-    **f3kdb_args: Any
+    clip: vs.VideoNode, radius: int = 30, thr: int | list[int] = 80,
+    grains: int | list[int] = 0, scale: int = 2,
+    scaler: ScalerT = Spline64, upscaler: ScalerT | None = None,
+    debander: type[Debander] | Debander = F3kdb
 ) -> vs.VideoNode:
     """
-    A simple debander ported from AviSynth.
+    A simple debander that debands at a downscaled resolution congruent to the chroma size.
 
-    :param clip:        Input clip
-    :param radius:      Banding detection range
-    :param threshold:   Banding detection thresholds for multiple planes
-    :param f3kdb_args:  Arguments passed to F3kdb constructor
+    :param clip:        Input clip.
+    :param radius:      Banding detection range.
+    :param thr:         Banding detection thr(s) for planes.
+    :param grains:      Specifies amount of grains added in the last debanding stage.
+    :param scale:       Scale to which downscale the clip for processing.
+    :param scaler:      Scaler used to downscale the clip before processing.
+    :param upscaler:    Scaler used to reupscale the difference up to original size.
+                        If ``None``, ``scaler`` will be used.
+    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
 
-    :return:            Debanded clip
+    :return:            Debanded clip.
     """
 
     assert check_variable(clip, lfdeband)
+
+    if not isinstance(debander, Debander):
+        debander = debander()
+
+    scaler = Scaler.ensure_obj(scaler, lfdeband)
+    upscaler = scaler.ensure_obj(upscaler, lfdeband)
 
     wss, hss = 1 << clip.format.subsampling_w, 1 << clip.format.subsampling_h
 
     w, h = clip.width, clip.height
 
-    dw, dh = round(w / 2), round(h / 2)
+    dw, dh = round(w / scale), round(h / scale)
 
     clip, bits = expect_bits(clip, 16)
-    dsc = core.resize.Spline64(clip, dw-dw % wss, dh-dh % hss)
 
-    d3kdb = F3kdb(radius, threshold, grain, **f3kdb_args).deband(dsc)
+    dsc = scaler.scale(clip, dw - dw % wss, dh - dh % hss)
 
-    ddif = d3kdb.std.MakeDiff(dsc)
+    deband = debander.deband(blur, radius=radius, thr=thr, grains=grains)
 
-    dif = core.resize.Spline64(ddif, w, h)
+    ddif = deband.std.MakeDiff(dsc)
+
+    dif = upscaler.Spline64(ddif, w, h)
 
     out = clip.std.MergeDiff(dif)
 
