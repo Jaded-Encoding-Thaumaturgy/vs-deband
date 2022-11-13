@@ -3,77 +3,63 @@ from __future__ import annotations
 from typing import Any
 
 from vsrgtools import limit_filter
-from vstools import KwargsT, core, depth, vs
+from vstools import KwargsT, check_variable, core, depth, expect_bits, to_arr, vs
 
+from .abstract import Debander
 from .f3kdb import F3kdb
 
 __all__ = [
-    'f3kbilateral', 'f3kpf',
+    'mdb_bilateral', 'f3kpf',
 
     'lfdeband'
 ]
 
 
-def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
-                 threshold: int | list[int] = 65, grain: int | list[int] = 0,
-                 f3kdb_args: KwargsT | None = None,
-                 limflt_args: KwargsT | None = None) -> vs.VideoNode:
+def mdb_bilateral(
+    clip: vs.VideoNode, radius: int = 16,
+    thr: int | list[int] = 65, grains: int | list[int] = 0,
+    lthr: int | tuple[int, int] = [153, 0], elast: float = 3.0,
+    bright_thr: int | None = None,
+    debander: type[Debander] | Debander = F3kdb
+) -> vs.VideoNode:
     """
-    f3kbilateral: f3kdb multistage bilateral-esque filter from vsdeband.
+    Multi stage debanding, bilateral-esque filter.
 
     This function is more of a last resort for extreme banding.
-    Recommend values are ~40-60 for y and c strengths.
+    Recommend values are ~40-60 for luma and chroma strengths.
 
     :param clip:        Input clip
-    :param radius:      Same as F3kdb constructor.
-    :param threshold:   Same as F3kdb constructor.
-    :param grain:       Same as F3kdb constructor.
-                        It happens after vsrgtools.limit_filter
-                        and call another instance of F3kdb if != 0.
-    :f3kdb_args:        Same as F3kdb kwargs constructor.
-    :lf_args:           Arguments passed to vsrgtools.limit_filter.
+    :param radius:      Banding detection range.
+    :param thr:         Banding detection thr(s) for planes.
+    :param grains:      Specifies amount of grains added in the last debanding stage.
+                        It happens after `vsrgtools.limit_filter`.
+    :lthr:              Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
+    :elast:             Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
+    :bright_thr:        Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
+    :debander:          Specify what Debander to use. You can pass an instance with custom arguments.
 
     :return:            Debanded clip
     """
 
-    if clip.format is None:
-        raise ValueError("f3kbilateral: 'Variable-format clips not supported'")
+    assert check_variable(clip, mdb_bilateral)
 
-    bits = clip.format.bits_per_sample
+    if not isinstance(debander, Debander):
+        debander = debander()
 
-    f3_args: KwargsT = dict()
-    if f3kdb_args is not None:
-        f3_args |= f3kdb_args
+    clip, bits = expect_bits(clip, 16)
 
-    lf_args: KwargsT = dict(thr=0.6, elast=3.0, thrc=None)
-    if limflt_args is not None:
-        lf_args |= limflt_args
+    rad1, rad2, rad3 = round(radius * 4 / 3), round(radius * 2 / 3), round(radius / 3)
 
-    rad1 = round(radius * 4 / 3)
-    rad2 = round(radius * 2 / 3)
-    rad3 = round(radius / 3)
+    db1 = debander.deband(clip, radius=rad1, thr=[max(1, th // 2) for th in to_arr(thr)], grains=0)
+    db2 = debander.deband(db1, radius=rad2, thr=thr, grains=0)
+    db3 = debander.deband(db2, radius=rad3, thr=thr, grains=0)
 
-    db1 = F3kdb(rad1, threshold, 0, **f3_args)
-    db2 = F3kdb(rad2, threshold, 0, **f3_args)
-    db3 = F3kdb(rad3, threshold, 0, **f3_args)
+    limit = limit_filter(db3, db2, clip, thr=lthr, elast=elast, bright_thr=bright_thr)
 
-    # Edit the thr of first f3kdb object
-    db1.thy, db1.thcb, db1.thcr = [max(1, th // 2) for th in (db1.thy, db1.thcb, db1.thcr)]
+    if grains:
+        limit = debander.grain(limit, grains=grains)
 
-    clip = depth(clip, 16)
-
-    flt1 = db1.deband(clip)
-    flt2 = db2.deband(flt1)
-    flt3 = db3.deband(flt2)
-
-    limit = limit_filter(flt3, flt2, clip, **lf_args)
-
-    if grain:
-        grained = F3kdb(grain=grain, **f3_args).grain(limit)
-    else:
-        grained = limit
-
-    return depth(grained, bits)
+    return depth(limit, bits)
 
 
 def f3kpf(clip: vs.VideoNode, radius: int = 16,
