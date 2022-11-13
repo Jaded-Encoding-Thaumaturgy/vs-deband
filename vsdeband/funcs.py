@@ -5,12 +5,15 @@ from typing import Any
 
 from vsrgtools import blur, limit_filter
 from vstools import VSFunction, check_variable, core, depth, expect_bits, to_arr, vs
+from vskernels import Scaler, ScalerT, Spline64
 
 from .abstract import Debander
 from .f3kdb import F3kdb
 
 __all__ = [
-    'mdb_bilateral', 'f3kpf',
+    'mdb_bilateral',
+
+    'pfdeband',
 
     'lfdeband'
 ]
@@ -63,7 +66,7 @@ def mdb_bilateral(
     return depth(limit, bits)
 
 
-def pref_deband(
+def pfdeband(
     clip: vs.VideoNode, radius: int = 16,
     thr: int | list[int] = 30, grains: int | list[int] = 0,
     lthr: int | tuple[int, int] = [76, 0], elast: float = 2.5,
@@ -71,7 +74,7 @@ def pref_deband(
     debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:
     """
-    pref_deband with a simple prefilter `by mawen1250 <https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.`>_
+    pfdeband is a simple prefilter `by mawen1250 <https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.`>_
 
     The default prefilter is a straight gaussian+average blur, so the effect becomes very strong very fast.
     Functions more or less like GradFun3 without the detail mask.
@@ -90,7 +93,7 @@ def pref_deband(
     :return:            Debanded clip.
     """
 
-    assert check_variable(clip, pref_deband)
+    assert check_variable(clip, pfdeband)
 
     if not isinstance(debander, Debander):
         debander = debander()
