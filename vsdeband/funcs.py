@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import Any
 
-from vsrgtools import limit_filter
-from vstools import KwargsT, check_variable, core, depth, expect_bits, to_arr, vs
+from vsrgtools import blur, limit_filter
+from vstools import VSFunction, check_variable, core, depth, expect_bits, to_arr, vs
 
 from .abstract import Debander
 from .f3kdb import F3kdb
@@ -28,7 +29,7 @@ def mdb_bilateral(
     This function is more of a last resort for extreme banding.
     Recommend values are ~40-60 for luma and chroma strengths.
 
-    :param clip:        Input clip
+    :param clip:        Input clip.
     :param radius:      Banding detection range.
     :param thr:         Banding detection thr(s) for planes.
     :param grains:      Specifies amount of grains added in the last debanding stage.
@@ -38,7 +39,7 @@ def mdb_bilateral(
     :bright_thr:        Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
     :debander:          Specify what Debander to use. You can pass an instance with custom arguments.
 
-    :return:            Debanded clip
+    :return:            Debanded clip.
     """
 
     assert check_variable(clip, mdb_bilateral)
@@ -62,40 +63,50 @@ def mdb_bilateral(
     return depth(limit, bits)
 
 
-def f3kpf(
+def pref_deband(
     clip: vs.VideoNode, radius: int = 16,
-    threshold: int | list[int] = 30, grain: int | list[int] = 0,
-    f3kdb_args: KwargsT | None = None,
-    limflt_args: KwargsT | None = None
+    thr: int | list[int] = 30, grains: int | list[int] = 0,
+    lthr: int | tuple[int, int] = [76, 0], elast: float = 2.5,
+    bright_thr: int | None = None, prefilter: VSFunction = partial(blur, radius=2),
+    debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:
     """
-    f3kdb with a simple prefilter by mawen1250 - https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.
+    pref_deband with a simple prefilter `by mawen1250 <https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.`>_
 
-    Since the prefilter is a straight gaussian+average blur, f3kdb's effect becomes very strong, very fast.
-    Functions more or less like gradfun3 without the detail mask.
+    The default prefilter is a straight gaussian+average blur, so the effect becomes very strong very fast.
+    Functions more or less like GradFun3 without the detail mask.
 
-    :param clip:        Input clip
-    :param radius:      Banding detection range
-    :param threshold:   Banding detection thresholds for multiple planes
-    :param f3kdb_args:  Arguments passed to F3kdb constructor
-    :param limflt_args: Arguments passed to vsrgtools.limit_filter
+    :param clip:        Input clip.
+    :param radius:      Banding detection range.
+    :param thr:         Banding detection thr(s) for planes.
+    :param grains:      Specifies amount of grains added in the last debanding stage.
+                        It happens after `vsrgtools.limit_filter`.
+    :lthr:              Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
+    :elast:             Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
+    :bright_thr:        Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
+    :prefilter:         Prefilter used to blur the clip before debanding.
+    :debander:          Specify what Debander to use. You can pass an instance with custom arguments.
 
-    :return:            Debanded clip
+    :return:            Debanded clip.
     """
 
-    assert check_variable(clip, f3kpf)
+    assert check_variable(clip, pref_deband)
 
-    f3_args = (f3kdb_args and f3kdb_args.copy()) or {}
+    if not isinstance(debander, Debander):
+        debander = debander()
 
-    lf_args = KwargsT(thr=0.3, elast=2.5, thrc=None) | (limflt_args or {})
+    try:
+        blur = prefilter(clip, planes=0, **kwargs)
+    except Exception:
+        blur = prefilter(clip, **kwargs)
 
-    blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     diff = core.std.MakeDiff(clip, blur)
 
-    deband = F3kdb(radius, threshold, grain, **f3_args).deband(blur)
-    deband = limit_filter(deband, blur, **lf_args)
+    deband = debander.deband(blur, radius=radius, thr=thr, grains=grains)
 
-    return core.std.MergeDiff(deband, diff)
+    limit = limit_filter(deband, blur, thr=lthr, elast=elast, bright_thr=bright_thr)
+
+    return limit.std.MergeDiff(diff)
 
 
 def lfdeband(
