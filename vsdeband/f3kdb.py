@@ -1,37 +1,94 @@
 from __future__ import annotations
 
-from enum import IntEnum
 from typing import Any
 
-from vstools import CustomValueError, check_variable, core, inject_self, vs, normalize_seq, VSFunction
+from vstools import CustomValueError, check_variable, core, inject_self, vs, normalize_seq, CustomIntEnum, clamp_arr
 
 from .abstract import Debander, Grainer
 
 __all__ = [
-    'SampleMode',
+    'F3kdbPlugin', 'SampleMode',
 
     'F3kdb'
 ]
 
 
-class SampleMode(IntEnum):
+class SampleMode(CustomIntEnum):
     COLUMN = 1
     SQUARE = 2
     ROW = 3
     COL_ROW_MEAN = 4
 
+    @property
+    def step(self) -> int:
+        return 16 if self is SampleMode.SQUARE else 32
+
+
+class F3kdbPlugin(CustomIntEnum):
+    OLD = 0
+    NEO = 1
+    NEO_NEW = 2
+
+    @property
+    def is_neo(self) -> bool:
+        return self is not F3kdbPlugin.OLD
+
+    @property
+    def thr_peak(self) -> int:
+        return 511 >> (3 if self.plugin is F3kdbPlugin.NEO_NEW else 0)
+
+    @property
+    def namespace(self) -> vs.Plugin:
+        return core.neo_f3kdb.Deband if self.is_neo else core.f3kdb.Deband
+
+    @inject_self.with_args(None)
+    def Deband(self, clip: vs.VideoNode, y: int = 0, cb: int = 0, cr: int = 0, **kwargs: Any) -> vs.VideoNode:
+        kwargs |= dict(keep_tv_range=True, output_depth=16)
+
+        if self is F3kdbPlugin.NEO_NEW:
+            kwargs |= dict(y2=y >> 3, cb2=cb >> 3, cr2=cr >> 3)
+        else:
+            kwargs |= dict(y=y, cb=cb, cr=cr)
+
+        return self.namespace.Deband(clip, **kwargs)
+
+    @classmethod
+    def from_param(cls, use_neo: bool | None) -> F3kdbPlugin:
+        if use_neo is None:
+            use_neo = hasattr(core, 'neo_f3kdb')
+
+        if not use_neo:
+            return F3kdbPlugin.OLD
+
+        if 'y2' in core.neo_f3kdb.Deband.__signature__.parameters:
+            return F3kdbPlugin.NEO_NEW
+
+        return F3kdbPlugin.NEO
+
+    def check_sample_mode(self, sample_mode: SampleMode) -> SampleMode:
+        if sample_mode > SampleMode.SQUARE and not self.is_neo:
+            raise CustomValueError(
+                'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
+                self.__class__.deband
+            )
+
+        return sample_mode
+
 
 class F3kdb(Debander, Grainer):
     """f3kdb object."""
+
     radius: int
     thy: int
     thcb: int
     thcr: int
     gry: int
     grc: int
-    sample_mode: int
-    use_neo: bool
-    f3kdb_args: dict[str, Any]
+    sample_mode: SampleMode
+    seed: int | None = None
+    dynamic_grain: int | None = None
+    dither_algo: int | None = None
+    blur_first: int | None = None
 
     _step: int
 
@@ -39,7 +96,7 @@ class F3kdb(Debander, Grainer):
         self,
         radius: int = 16,
         threshold: int | list[int] = 30, grain: int | list[int] = 0,
-        sample_mode: SampleMode = 2, use_neo: bool = False, **kwargs: Any
+        sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any
     ) -> None:
         """
         Handle debanding operations onto a clip using a set of configured parameters.
@@ -71,22 +128,11 @@ class F3kdb(Debander, Grainer):
         """
         self.radius = radius
 
-        self.thy, self.thcb, self.thcr = [max(1, x) for x in normalize_seq(threshold)]
+        self.plugin = F3kdbPlugin.from_param(use_neo)
+        self.sample_mode = self.plugin.check_sample_mode(sample_mode)
+
+        self.thy, self.thcb, self.thcr = clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak)
         self.gry, self.grc = normalize_seq(grain, 2)
-
-        if sample_mode > 2 and not use_neo:
-            raise CustomValueError(
-                'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
-                self.__class__.deband
-            )
-
-        self.sample_mode = sample_mode
-        self.use_neo = use_neo
-        self.new_neo = self.use_neo and ('y2' in core.neo_f3kdb.Deband.__signature__.parameters)
-
-        self._step = 16 if sample_mode == 2 else 32
-
-        self.f3kdb_args = dict(keep_tv_range=True, output_depth=16) | kwargs
 
     @inject_self
     def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
@@ -106,31 +152,27 @@ class F3kdb(Debander, Grainer):
             sample_mode=self.sample_mode,
         ) | self.f3kdb_args
 
-        if self.new_neo:
-            deband = self._f3kdb_plugin(clip, y2=self.thy >> 3, cb2=self.thcb >> 3, cr2=self.thcr >> 3, **kwargs)
-        elif self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
-            deband = self._f3kdb_plugin(clip, y=self.thy, cb=self.thcb, cr=self.thcr, **kwargs)
+        if self.new_neo or all(x % self._step == 1 for x in (self.thy, self.thcb, self.thcr)):
+            return self.plugin.Deband(clip, self.thy, self.thcb, self.thcr, **kwargs)
+
+        loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
+        hiy, hicb, hicr = [lo + self._step for lo in [loy, locb, locr]]
+
+        lo_clip = self.plugin.Deband(clip, loy, locb, locr, **kwargs)
+        hi_clip = self.plugin.Deband(clip, hiy, hicb, hicr, **kwargs)
+
+        if clip.format.color_family == vs.GRAY:
+            weight = [
+                (self.thy - loy) / self._step
+            ]
         else:
-            loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
-            hiy, hicb, hicr = [lo + self._step for lo in [loy, locb, locr]]
+            weight = [
+                (self.thy - loy) / self._step,
+                (self.thcb - locb) / self._step,
+                (self.thcr - locr) / self._step
+            ]
 
-            lo_clip = self._f3kdb_plugin(clip, y=loy, cb=locb, cr=locr, **kwargs)
-            hi_clip = self._f3kdb_plugin(clip, y=hiy, cb=hicb, cr=hicr, **kwargs)
-
-            if clip.format.color_family == vs.GRAY:
-                weight = [
-                    (self.thy - loy) / self._step
-                ]
-            else:
-                weight = [
-                    (self.thy - loy) / self._step,
-                    (self.thcb - locb) / self._step,
-                    (self.thcr - locr) / self._step
-                ]
-
-            deband = core.std.Merge(lo_clip, hi_clip, weight)
-
-        return deband
+        return lo_clip.std.Merge(hi_clip, weight)
 
     @inject_self
     def grain(self, clip: vs.VideoNode) -> vs.VideoNode:
@@ -142,7 +184,3 @@ class F3kdb(Debander, Grainer):
         """
         self.thy, self.thcr, self.thcb = (1, ) * 3
         return self.deband(clip)
-
-    @property
-    def _f3kdb_plugin(self) -> VSFunction:
-        return core.neo_f3kdb.Deband if self.use_neo else core.f3kdb.Deband
