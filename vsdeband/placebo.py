@@ -126,5 +126,5 @@ class Placebo(Debander):
         return join(debs, clip.format.color_family)
 
     @inject_self
-    def grain(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
+    def grain(self, clip: vs.VideoNode, strength: float | tuple[int, int]) -> vs.VideoNode:  # type: ignore[override]
         raise NotImplementedError

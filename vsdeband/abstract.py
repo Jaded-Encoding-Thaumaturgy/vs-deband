@@ -18,7 +18,7 @@ class Grainer(ABC):
 
     @abstractmethod
     @inject_self
-    def grain(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
+    def grain(self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any) -> vs.VideoNode:
         ...
 
 
