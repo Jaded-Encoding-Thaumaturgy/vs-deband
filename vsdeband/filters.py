@@ -44,14 +44,12 @@ def guided_filter(
     thr = [t / s for t, s in zip(thr, size)]
 
     if radius is None:
-        rad, radc = [
-            max((w - 1280) / 160 + 12, (h - 720) / 90 + 12)
+        radius = [
+            round(max((w - 1280) / 160 + 12, (h - 720) / 90 + 12))
             for w, h in [
                 get_plane_sizes(clip, i) for i in range(clip.format.num_planes)
             ]
         ]
-
-        radius = normalize_seq([round(rad), round(radc)], clip.format.num_planes)
 
     check_ref_clip(clip, guidance)
 
