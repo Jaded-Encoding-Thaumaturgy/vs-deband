@@ -3,9 +3,9 @@ from __future__ import annotations
 from functools import partial
 from typing import Any
 
+from vskernels import Scaler, ScalerT, Spline64
 from vsrgtools import blur, limit_filter
 from vstools import VSFunction, check_variable, core, depth, expect_bits, to_arr, vs
-from vskernels import Scaler, ScalerT, Spline64
 
 from .abstract import Debander
 from .f3kdb import F3kdb
