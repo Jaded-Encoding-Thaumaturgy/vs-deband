@@ -62,10 +62,12 @@ def mdb_bilateral(
     return depth(limit, bits)
 
 
-def f3kpf(clip: vs.VideoNode, radius: int = 16,
-          threshold: int | list[int] = 30, grain: int | list[int] = 0,
-          f3kdb_args: KwargsT | None = None,
-          limflt_args: KwargsT | None = None) -> vs.VideoNode:
+def f3kpf(
+    clip: vs.VideoNode, radius: int = 16,
+    threshold: int | list[int] = 30, grain: int | list[int] = 0,
+    f3kdb_args: KwargsT | None = None,
+    limflt_args: KwargsT | None = None
+) -> vs.VideoNode:
     """
     f3kdb with a simple prefilter by mawen1250 - https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.
 
@@ -81,16 +83,11 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     :return:            Debanded clip
     """
 
-    if clip.format is None:
-        raise ValueError("f3kpf: 'Variable-format clips not supported'")
+    assert check_variable(clip, f3kpf)
 
-    f3_args: KwargsT = dict()
-    if f3kdb_args is not None:
-        f3_args |= f3kdb_args
+    f3_args = (f3kdb_args and f3kdb_args.copy()) or {}
 
-    lf_args: KwargsT = dict(thr=0.3, elast=2.5, thrc=None)
-    if limflt_args is not None:
-        lf_args |= limflt_args
+    lf_args = KwargsT(thr=0.3, elast=2.5, thrc=None) | (limflt_args or {})
 
     blur = core.std.Convolution(clip, [1, 2, 1, 2, 4, 2, 1, 2, 1]).std.Convolution([1] * 9, planes=0)
     diff = core.std.MakeDiff(clip, blur)
@@ -101,9 +98,11 @@ def f3kpf(clip: vs.VideoNode, radius: int = 16,
     return core.std.MergeDiff(deband, diff)
 
 
-def lfdeband(clip: vs.VideoNode, radius: int = 30,
-             threshold: int | list[int] = 80, grain: int | list[int] = 0,
-             **f3kdb_args: Any) -> vs.VideoNode:
+def lfdeband(
+    clip: vs.VideoNode, radius: int = 30,
+    threshold: int | list[int] = 80, grain: int | list[int] = 0,
+    **f3kdb_args: Any
+) -> vs.VideoNode:
     """
     A simple debander ported from AviSynth.
 
@@ -114,21 +113,24 @@ def lfdeband(clip: vs.VideoNode, radius: int = 30,
 
     :return:            Debanded clip
     """
-    if clip.format is None:
-        raise ValueError("lfdeband: 'Variable-format clips not supported'")
 
-    bits = clip.format.bits_per_sample
+    assert check_variable(clip, lfdeband)
+
     wss, hss = 1 << clip.format.subsampling_w, 1 << clip.format.subsampling_h
+
     w, h = clip.width, clip.height
+
     dw, dh = round(w / 2), round(h / 2)
 
-    clip = depth(clip, 16)
+    clip, bits = expect_bits(clip, 16)
     dsc = core.resize.Spline64(clip, dw-dw % wss, dh-dh % hss)
 
     d3kdb = F3kdb(radius, threshold, grain, **f3kdb_args).deband(dsc)
 
-    ddif = core.std.MakeDiff(d3kdb, dsc)
+    ddif = d3kdb.std.MakeDiff(dsc)
 
     dif = core.resize.Spline64(ddif, w, h)
-    out = core.std.MergeDiff(clip, dif)
+
+    out = clip.std.MergeDiff(dif)
+
     return depth(out, bits)
