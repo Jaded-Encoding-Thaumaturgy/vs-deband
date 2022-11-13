@@ -61,17 +61,18 @@ class PlaceboDither(CustomIntEnum):
 @dataclass
 class Placebo(Debander):
     radius: float | None = None
-    threshold: float | list[float] | None = None
+    thr: float | list[float] | None = None
+    grains: float | list[float] | None = None
+
     iterations: int | None = None
-    grain: float | list[float] | None = None
 
     dither: PlaceboDither | None = None
     renderer: bool | None = None
 
     @inject_self
     def deband(  # type: ignore[override]
-        self, clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
-        iterations: int = 1, grain: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT,
+        self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
+        iterations: int = 1, grains: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT,
         renderer: bool = False
     ) -> vs.VideoNode:
         """
@@ -82,14 +83,14 @@ class Placebo(Debander):
                                 The radius increases linearly for each iteration.
                                 A higher radius will find more gradients,
                                 but a lower radius will smooth more aggressively.
-        :param threshold:       The debanding filter's cut-off threshold.
+        :param thr:             The debanding filter's cut-off threshold.
                                 Higher numbers increase the debanding strength dramatically,
                                 but progressively diminish image details.
         :param iterations:      The number of debanding steps to perform per sample.
                                 Each step reduces a bit more banding,
                                 but takes time to compute.
                                 Note that the strength of each step falls off very quickly,
-                                so high numbers (>4) are practically useless.
+                                so high numbers (> 4) are practically useless.
         :param grain:           Add some extra noise to the image.
                                 This significantly helps cover up remaining quantization artifacts.
                                 Higher numbers add more noise.
@@ -105,15 +106,15 @@ class Placebo(Debander):
         assert check_variable(clip, self.__class__.deband)
 
         radius = fallback(self.radius, radius)
-        threshold = normalize_seq(fallback(self.threshold, threshold))  # type: ignore[arg-type]
+        thr = normalize_seq(fallback(self.thr, thr))  # type: ignore[arg-type]
         iterations = fallback(self.iterations, iterations)
-        grain = normalize_seq(fallback(self.grain, grain))  # type: ignore[arg-type]
+        grains = normalize_seq(fallback(self.grains, grains))  # type: ignore[arg-type]
         dither = fallback(self.dither, dither)
         renderer = fallback(self.renderer, renderer)
 
         debs = [
             p.placebo.Deband(1, iterations, thr, radius, gra, **dither.placebo_args, renderer_api=renderer)
-            for p, thr, gra in zip(split(clip), threshold, grain)
+            for p, thr, gra in zip(split(clip), thr, grains)
         ]
 
         if len(debs) == 1:

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from dataclasses import dataclass, field
 
 from vstools import (
     CustomIntEnum, CustomValueError, DataType, VSFunction, check_variable, clamp_arr, core, inject_self, normalize_seq,
-    vs, FuncExceptT
+    vs, FuncExceptT, fallback
 )
 
 from .abstract import Debander, Grainer
@@ -93,102 +94,116 @@ class F3kdbPlugin(CustomIntEnum):
         return sample_mode
 
 
+@dataclass
 class F3kdb(Debander, Grainer):
-    """f3kdb object."""
+    """Debander, Grainer wrapper around the f3kdb plugin."""
 
-    radius: int
-    thrs: tuple[int, int, int]
-    gry: int
-    grc: int
-    sample_mode: SampleMode
+    radius: int | None = None
+    thr: int | tuple[int, int, int] | None = None
+    grains: int | list[int] | None = None
+
+    sample_mode: SampleMode | None = None
+
     seed: int | None = None
     dynamic_grain: int | None = None
     dither_algo: int | None = None
-    blur_first: int | None = None
 
-    def __init__(
-        self,
-        radius: int = 16,
-        threshold: int | list[int] = 30, grain: int | list[int] = 0,
-        sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any
-    ) -> None:
-        """
-        Handle debanding operations onto a clip using a set of configured parameters.
+    blur_first: bool | None = None
 
-        Both f3kdb and neo_f3kdb actually change their strength at 1 + 16 * n for SampleMode.SQUARE
-        and 1 + 32 * n for SampleMode.COLUMN, SampleMode.ROW or SampleMode.COL_ROW_MEAN.
-        This function is aiming to average n and n + 1 strength for a better accuracy.
-        Original function written by Z4ST1N, modified by Vardë.
+    use_neo: bool | None = field(default=None, kw_only=True)
 
-        :param radius:          Banding detection range
-        :param threshold:       Banding detection threshold(s) for planes
-        :param grain:           Specifies amount of grains added in the last debanding stage
-        :param sample_mode:     Valid modes are:
-                                * SampleMode.COLUMN or 1: Take 2 pixels as reference pixel
-                                  Reference pixels are in the same column of current pixel
-                                * SampleMode.SQUARE or 2: Take 4 pixels as reference pixel
-                                  Reference pixels are in the square around current pixel
-                                * SampleMode.ROW or 3: Take 2 pixels as reference pixel
-                                  Reference pixels are in the same row of current pixel
-                                  Only `neo_f3kdb.Deband` supports it
-                                * SampleMode.COL_ROW_MEAN or 4: Arithmetic mean of 1 and 3
-                                  Reference points are randomly picked within the range
-                                  Only `neo_f3kdb.Deband` supports it
-        :param use_neo:         Use `neo_f3kdb.Deband`
-        :param kwargs:          Arguments passed to f3kdb.Deband
-                                Default are `keep_tv_range=True, output_depth=16`
-                                Read the f3kdb's documentation for more information about them:
-                                https://f3kdb.readthedocs.io/en/latest/usage.html#parameters
-        """
-        self.radius = radius
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
-        self.plugin = F3kdbPlugin.from_param(use_neo)
-        self.sample_mode = self.plugin.check_sample_mode(sample_mode, F3kdb)
-
-        self.thrs = cast(tuple[int, int, int], tuple(clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak)))
-        self.gry, self.grc = normalize_seq(grain, 2)
+        self.plugin = F3kdbPlugin.from_param(self.use_neo)
 
     @inject_self
-    def deband(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
+    def deband(
+        self, clip: vs.VideoNode,
+        radius: int = 16,
+        thr: int | tuple[int, int, int] = 30,
+        grains: int | list[int] = 0,
+        sample_mode: SampleMode = SampleMode.SQUARE,
+        seed: int = None,
+        dynamic_grain: int = None,
+        dither_algo: int = None,
+        blur_first: bool | None = None
+    ) -> vs.VideoNode:  # type: ignore[override]
         """
         Main deband function
 
-        :param clip:            Source clip
-        :return:                Debanded clip
+        Handle debanding operations onto a clip using a set of configured parameters.
+
+        Before neo_f3kdb r7, both f3kdb and neo_f3kdb change their strength
+        at 1 + 16 * n for SampleMode.SQUARE and 1 + 32 * n for SampleMode.COLUMN,
+        SampleMode.ROW or SampleMode.COL_ROW_MEAN.
+
+        This function aimed to average n and n + 1 strength for better debanding accuracy.
+
+        :param radius:          Banding detection range.
+        :param thr:             Banding detection thr(s) for planes.
+        :param grain:           Specifies amount of grains added in the last debanding stage.
+        :param sample_mode:     Valid modes are:
+                                * SampleMode.COLUMN: Take 2 pixels as reference pixel.
+                                  Reference pixels are in the same column of current pixel.
+                                * SampleMode.SQUARE: Take 4 pixels as reference pixel.
+                                  Reference pixels are in the square around current pixel.
+                                * SampleMode.ROW: Take 2 pixels as reference pixel.
+                                  Reference pixels are in the same row of current pixel.
+                                  Only `neo_f3kdb` supports it.
+                                * SampleMode.COL_ROW_MEAN: Arithmetic mean of COLUMN and ROW.
+                                  Reference points are randomly picked within the range.
+                                  Only `neo_f3kdb` supports it.
+
+        :return:                Debanded clip.
         """
 
         assert check_variable(clip, self.__class__.deband)
 
-        step = self.sample_mode.step
-        kwargs = dict[str, Any](
-            range=self.radius, grainy=self.gry, grainc=self.grc, sample_mode=self.sample_mode
-        )
+        radius = fallback(self.radius, radius)
 
-        if self.plugin is F3kdbPlugin.NEO_NEW or all(x % self.sample_mode.step == 1 for x in self.thrs):
-            return self.plugin.Deband(clip, self.thy, self.thcb, self.thcr, **kwargs)
+        sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
 
-        lows = cast(tuple[int, int, int], tuple(((th - 1) // step * step + 1 for th in self.thrs)))
+        thrs = cast(tuple[int, int, int], tuple(clamp_arr(normalize_seq(thr), 1, self.plugin.thr_peak)))
+        gry, grc = normalize_seq(fallback(self.grains, grains), 2)
+
+        step = sample_mode.step
+        kwargs = dict[str, Any](range=radius, grainy=gry, grainc=grc, sample_mode=sample_mode)
+
+        if self.plugin is F3kdbPlugin.NEO_NEW or all(x % sample_mode.step == 1 for x in thrs):
+            return self.plugin.Deband(clip, *thrs, **kwargs)
+
+        lows = cast(tuple[int, int, int], tuple(((th - 1) // step * step + 1 for th in thrs)))
         highs = cast(tuple[int, int, int], tuple((lo + step for lo in lows)))
 
         lo_clip = self.plugin.Deband(clip, *lows, **kwargs)
         hi_clip = self.plugin.Deband(clip, *highs, **kwargs)
 
         if clip.format.color_family == vs.GRAY:
-            weight = [(self.thrs[0] - lows[0]) / step]
+            weight = [(thrs[0] - lows[0]) / step]
         else:
-            weight = [(thr - low) / step for thr, low in zip(self.thrs, lows)]
+            weight = [(thr - low) / step for thr, low in zip(thrs, lows)]
 
         return lo_clip.std.Merge(hi_clip, weight)
 
     @inject_self
-    def grain(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
+    def grain(
+        self, clip: vs.VideoNode, grains: int | list[int] = 4, radius: int = 16,
+        sample_mode: SampleMode = SampleMode.SQUARE
+    ) -> vs.VideoNode:  # type: ignore[override]
         """
-        Convenience function that set thresholds to 1 (basically it doesn't deband)
+        Add f3kdb grain to the clip.
 
         :param clip:            Source clip
+        :param grains:          Specifies amount of grains added in the last debanding stage.
+
         :return:                Grained clip
         """
 
-        return self.plugin.Deband(
-            clip, 1, 1, 1, range=self.radius, grainy=self.gry, grainc=self.grc, sample_mode=self.sample_mode
-        )
+        radius = fallback(self.radius, radius)
+
+        sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
+
+        gry, grc = normalize_seq(fallback(self.grains, grains), 2)
+
+        return self.plugin.Deband(clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode)
