@@ -34,10 +34,10 @@ def mdb_bilateral(
     :param thr:         Banding detection thr(s) for planes.
     :param grains:      Specifies amount of grains added in the last debanding stage.
                         It happens after `vsrgtools.limit_filter`.
-    :lthr:              Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
-    :elast:             Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
-    :bright_thr:        Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
-    :debander:          Specify what Debander to use. You can pass an instance with custom arguments.
+    :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
+    :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
+    :param bright_thr:  Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
+    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
 
     :return:            Debanded clip.
     """
@@ -81,11 +81,11 @@ def pref_deband(
     :param thr:         Banding detection thr(s) for planes.
     :param grains:      Specifies amount of grains added in the last debanding stage.
                         It happens after `vsrgtools.limit_filter`.
-    :lthr:              Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
-    :elast:             Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
-    :bright_thr:        Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
-    :prefilter:         Prefilter used to blur the clip before debanding.
-    :debander:          Specify what Debander to use. You can pass an instance with custom arguments.
+    :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
+    :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
+    :param bright_thr:  Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
+    :param prefilter:   Prefilter used to blur the clip before debanding.
+    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
 
     :return:            Debanded clip.
     """
