@@ -8,7 +8,7 @@ from vskernels import Bilinear, Point, Scaler, ScalerT
 from vsrgtools import box_blur, gauss_blur
 from vstools import (
     ColorRange, ColorRangeT, PlanesT, check_ref_clip, check_variable, cround, depth, expect_bits, normalize_planes,
-    normalize_seq, vs
+    normalize_seq, vs, get_plane_sizes
 )
 
 from .types import GuidedFilterMode
@@ -19,8 +19,8 @@ __all__ = [
 
 
 def guided_filter(
-    clip: vs.VideoNode, guidance: vs.VideoNode | None = None, radius: int | None = None,
-    thr: float = 1 / 3, regulation: list[float] | None = None, mode: GuidedFilterMode = GuidedFilterMode.GRADIENT,
+    clip: vs.VideoNode, guidance: vs.VideoNode | None = None, radius: int | list[int] | None = None,
+    thr: float | list[float] = 1 / 3, mode: GuidedFilterMode = GuidedFilterMode.GRADIENT,
     use_gauss: bool = False, planes: PlanesT = None, range_in: ColorRangeT | None = None,
     down_ratio: int = 0, downscaler: ScalerT = Point, upscaler: ScalerT = Bilinear
 ) -> vs.VideoNode:
@@ -35,46 +35,47 @@ def guided_filter(
 
     width, height = clip.width, clip.height
 
-    if regulation is None:
-        thr = normalize_seq(thr, clip.format.num_planes)
+    thr = normalize_seq(thr, clip.format.num_planes)
 
-        size = normalize_seq([220, 225, 225] if range_in.is_full else 256, clip.format.num_planes)
+    size = normalize_seq(
+        [220, 225, 225] if range_in.is_full else 256, clip.format.num_planes
+    )
 
-        regulation = [t / s for t, s in zip(thr, size)]
+    thr = [t / s for t, s in zip(thr, size)]
 
     if radius is None:
-        width_c = width / (1 << clip.format.subsampling_w)
-        height_c = height / (1 << clip.format.subsampling_h)
+        rad, radc = [
+            max((w - 1280) / 160 + 12, (h - 720) / 90 + 12)
+            for w, h in [
+                get_plane_sizes(clip, i) for i in range(clip.format.num_planes)
+            ]
+        ]
 
-        rad = max((width - 1280) / 160 + 12, (height - 720) / 90 + 12)
-        radc = max((width_c - 1280) / 160 + 12, (height_c-720) / 90 + 12)
-        radius = [round(rad), round(radc)][:clip.format.num_planes]
+        radius = normalize_seq([round(rad), round(radc)], clip.format.num_planes)
 
     check_ref_clip(clip, guidance)
 
     p, bits = expect_bits(clip, 32)
     guidance_clip = g = depth(guidance, 32) if guidance is not None else p
 
-    r = normalize_seq(radius, clip.format.num_planes)
-    eps = normalize_seq(regulation, clip.format.num_planes)
+    radius = normalize_seq(radius, clip.format.num_planes)
 
     if down_ratio:
-        down_w = cround(width / down_ratio)
-        down_h = cround(height / down_ratio)
+        down_w, down_h = cround(width / down_ratio), cround(height / down_ratio)
 
         p = downscaler.scale(p, down_w, down_h)
         g = downscaler.scale(g, down_w, down_h) if guidance is not None else p
 
-        r = cround(r / down_ratio)
+        radius = [cround(rad / down_ratio) for rad in radius]
 
     blur_filter = partial(
-        gauss_blur, sigma=[val / 2 * sqrt(2) for val in r], planes=planes
+        gauss_blur, sigma=[rad / 2 * sqrt(2) for rad in radius], planes=planes
     ) if use_gauss else partial(
-        box_blur, radius=[val + 1 for val in r], planes=planes
+        box_blur, radius=[rad + 1 for rad in radius], planes=planes
     )
 
     blur_filter_corr = partial(
-        gauss_blur, sigma=1/2 * sqrt(2), planes=planes
+        gauss_blur, sigma=1 / 2 * sqrt(2), planes=planes
     ) if use_gauss else partial(box_blur, radius=2, planes=planes)
 
     mean_p = blur_filter(p)
@@ -88,9 +89,9 @@ def guided_filter(
     cov_Ip = norm_expr([corr_Ip, mean_I, mean_p], 'x y z * -', planes) if guidance is not None else var_I
 
     if mode is GuidedFilterMode.ORIGINAL:
-        a = norm_expr([cov_Ip, var_I], 'x y {eps} + /', planes, eps=eps)
+        a = norm_expr([cov_Ip, var_I], 'x y {thr} + /', planes, thr=thr)
     else:
-        if r == 1:
+        if set(radius) == {1}:
             var_I_1 = var_I
         else:
             mean_I_1 = blur_filter_corr(g)
@@ -116,16 +117,16 @@ def guided_filter(
             )
 
         if mode is GuidedFilterMode.WEIGHTED:
-            a = norm_expr([cov_Ip, var_I, weight], 'x y {eps} z / + /', planes, eps=eps)
+            a = norm_expr([cov_Ip, var_I, weight], 'x y {thr} z / + /', planes, thr=thr)
         else:
             weight_in = weight_in.std.PlaneStats(None, 0)
 
             if aka_expr_available:
                 a = norm_expr(
                     [cov_Ip, weight_in, weight, var_I],
-                    'x {eps} 1 1 1 -4 y.PlaneStatsMin y.PlaneStatsAverage 1e-6 - - / '
-                    'y y.PlaneStatsAverage - * exp + / - * z / + a {eps} z / + /',
-                    planes, eps=eps
+                    'x {thr} 1 1 1 -4 y.PlaneStatsMin y.PlaneStatsAverage 1e-6 - - / '
+                    'y y.PlaneStatsAverage - * exp + / - * z / + a {thr} z / + /',
+                    planes, thr=thr
                 )
             else:
                 def _gradient(n, f):
@@ -133,8 +134,8 @@ def guided_filter(
 
                     return norm_expr(
                         [cov_Ip, weight_in, weight, var_I],
-                        'x {eps} 1 1 1 {kk} y {alpha} - * exp + / - * z / + a {eps} z / + /',
-                        planes, eps=eps, kk=-4 / (f.props.PlaneStatsMin - frameMean - 1e-6), alpha=frameMean
+                        'x {thr} 1 1 1 {kk} y {alpha} - * exp + / - * z / + a {thr} z / + /',
+                        planes, thr=thr, kk=-4 / (f.props.PlaneStatsMin - frameMean - 1e-6), alpha=frameMean
                     )
 
                 a = weight.std.FrameEval(_gradient, weight_in)
