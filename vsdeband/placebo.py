@@ -69,7 +69,7 @@ class Placebo(Debander):
     renderer: bool | None = None
 
     @inject_self
-    def deband(
+    def deband(  # type: ignore[override]
         self, clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
         iterations: int = 1, grain: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT,
         renderer: bool = False
@@ -105,9 +105,9 @@ class Placebo(Debander):
         assert check_variable(clip, self.__class__.deband)
 
         radius = fallback(self.radius, radius)
-        threshold = normalize_seq(fallback(self.threshold, threshold))
+        threshold = normalize_seq(fallback(self.threshold, threshold))  # type: ignore[arg-type]
         iterations = fallback(self.iterations, iterations)
-        grain = normalize_seq(fallback(self.grain, grain))
+        grain = normalize_seq(fallback(self.grain, grain))  # type: ignore[arg-type]
         dither = fallback(self.dither, dither)
         renderer = fallback(self.renderer, renderer)
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
-from vstools import CustomValueError, check_variable, core, inject_self, vs, normalize_seq, CustomIntEnum, clamp_arr
+from vstools import (
+    CustomIntEnum, CustomValueError, DataType, VSFunction, check_variable, clamp_arr, core, inject_self, normalize_seq,
+    vs, FuncExceptT
+)
 
 from .abstract import Debander, Grainer
 
@@ -35,41 +38,56 @@ class F3kdbPlugin(CustomIntEnum):
 
     @property
     def thr_peak(self) -> int:
-        return 511 >> (3 if self.plugin is F3kdbPlugin.NEO_NEW else 0)
+        return 511 >> (3 if self is F3kdbPlugin.NEO_NEW else 0)
 
     @property
     def namespace(self) -> vs.Plugin:
-        return core.neo_f3kdb.Deband if self.is_neo else core.f3kdb.Deband
+        return core.neo_f3kdb if self.is_neo else core.f3kdb
 
     @inject_self.with_args(None)
-    def Deband(self, clip: vs.VideoNode, y: int = 0, cb: int = 0, cr: int = 0, **kwargs: Any) -> vs.VideoNode:
-        kwargs |= dict(keep_tv_range=True, output_depth=16)
+    def Deband(
+        self, clip: vs.VideoNode, y: int = 0, cb: int = 0, cr: int = 0, *,
+        range: int | None = None, grainy: int | None = None, grainc: int | None = None,
+        keep_tv_range: bool = True, output_depth: int = 16,
+        seed: int | None = None, sample_mode: int | None = None,
+        dynamic_grain: int | None = None, dither_algo: int | None = None,
+        preset: DataType | None = None, blur_first: int | None = None,
+        random_algo_ref: int | None = None, random_algo_grain: int | None = None,
+        random_param_ref: float | None = None, random_param_grain: float | None = None
+    ) -> vs.VideoNode:
+        kwargs = dict(
+            range=range, grainy=grainy, grainc=grainc, sample_mode=sample_mode, seed=seed,
+            blur_first=blur_first, dynamic_grain=dynamic_grain, random_param_grain=random_param_grain,
+            keep_tv_range=keep_tv_range, output_depth=output_depth, random_algo_ref=random_algo_ref,
+            random_algo_grain=random_algo_grain, random_param_ref=random_param_ref, preset=preset,
+            dither_algo=dither_algo
+        )
 
         if self is F3kdbPlugin.NEO_NEW:
             kwargs |= dict(y2=y >> 3, cb2=cb >> 3, cr2=cr >> 3)
         else:
             kwargs |= dict(y=y, cb=cb, cr=cr)
 
-        return self.namespace.Deband(clip, **kwargs)
+        return cast(VSFunction, self.namespace.Deband)(clip, **kwargs)
 
     @classmethod
-    def from_param(cls, use_neo: bool | None) -> F3kdbPlugin:
+    def from_param(cls, use_neo: bool | None) -> F3kdbPlugin:  # type: ignore[override]
         if use_neo is None:
             use_neo = hasattr(core, 'neo_f3kdb')
 
         if not use_neo:
             return F3kdbPlugin.OLD
 
-        if 'y2' in core.neo_f3kdb.Deband.__signature__.parameters:
+        if 'y2' in core.neo_f3kdb.Deband.__signature__.parameters:  # type: ignore[attr-defined]
             return F3kdbPlugin.NEO_NEW
 
         return F3kdbPlugin.NEO
 
-    def check_sample_mode(self, sample_mode: SampleMode) -> SampleMode:
+    def check_sample_mode(self, sample_mode: SampleMode, func: FuncExceptT | None = None) -> SampleMode:
         if sample_mode > SampleMode.SQUARE and not self.is_neo:
             raise CustomValueError(
                 'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
-                self.__class__.deband
+                func or self.__class__.check_sample_mode
             )
 
         return sample_mode
@@ -79,9 +97,7 @@ class F3kdb(Debander, Grainer):
     """f3kdb object."""
 
     radius: int
-    thy: int
-    thcb: int
-    thcr: int
+    thrs: tuple[int, int, int]
     gry: int
     grc: int
     sample_mode: SampleMode
@@ -89,8 +105,6 @@ class F3kdb(Debander, Grainer):
     dynamic_grain: int | None = None
     dither_algo: int | None = None
     blur_first: int | None = None
-
-    _step: int
 
     def __init__(
         self,
@@ -129,13 +143,13 @@ class F3kdb(Debander, Grainer):
         self.radius = radius
 
         self.plugin = F3kdbPlugin.from_param(use_neo)
-        self.sample_mode = self.plugin.check_sample_mode(sample_mode)
+        self.sample_mode = self.plugin.check_sample_mode(sample_mode, F3kdb)
 
-        self.thrs = tuple[int, int, int](clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak))
+        self.thrs = cast(tuple[int, int, int], tuple(clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak)))
         self.gry, self.grc = normalize_seq(grain, 2)
 
     @inject_self
-    def deband(self, clip: vs.VideoNode) -> vs.VideoNode:
+    def deband(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
         """
         Main deband function
 
@@ -145,28 +159,29 @@ class F3kdb(Debander, Grainer):
 
         assert check_variable(clip, self.__class__.deband)
 
+        step = self.sample_mode.step
         kwargs = dict[str, Any](
             range=self.radius, grainy=self.gry, grainc=self.grc, sample_mode=self.sample_mode
-        ) | self.f3kdb_args
+        )
 
-        if self.new_neo or all(x % self._step == 1 for x in self.thrs):
+        if self.plugin is F3kdbPlugin.NEO_NEW or all(x % self.sample_mode.step == 1 for x in self.thrs):
             return self.plugin.Deband(clip, self.thy, self.thcb, self.thcr, **kwargs)
 
-        lows = tuple[int, int, int]((th - 1) // self._step * self._step + 1 for th in self.thrs)
-        highs = tuple[int, int, int](lo + self._step for lo in lows)
+        lows = cast(tuple[int, int, int], tuple(((th - 1) // step * step + 1 for th in self.thrs)))
+        highs = cast(tuple[int, int, int], tuple((lo + step for lo in lows)))
 
         lo_clip = self.plugin.Deband(clip, *lows, **kwargs)
         hi_clip = self.plugin.Deband(clip, *highs, **kwargs)
 
         if clip.format.color_family == vs.GRAY:
-            weight = [(self.thrs[0] - lows[0]) / self._step]
+            weight = [(self.thrs[0] - lows[0]) / step]
         else:
-            weight = [(thr - low) / self._step for thr, low in zip(self.thrs, lows)]
+            weight = [(thr - low) / step for thr, low in zip(self.thrs, lows)]
 
         return lo_clip.std.Merge(hi_clip, weight)
 
     @inject_self
-    def grain(self, clip: vs.VideoNode) -> vs.VideoNode:
+    def grain(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
         """
         Convenience function that set thresholds to 1 (basically it doesn't deband)
 
