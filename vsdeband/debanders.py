@@ -14,13 +14,6 @@ __all__ = [
 ]
 
 
-def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
-             threshold: int | list[int] = 30, grain: int | list[int] = 0,
-             sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
-    """Small convenience function for calling F3kdb().deband()."""
-    return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
-
-
 def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
                  threshold: int | list[int] = 65, grain: int | list[int] = 0,
                  f3kdb_args: KwargsT | None = None,
