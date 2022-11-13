@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from vstools import check_variable, fallback, inject_self, join, normalize_seq, split, vs, CustomIntEnum, KwargsT
+
+from vstools import CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, normalize_seq, split, vs
 
 from .abstract import Debander
 

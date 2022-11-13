@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from vstools import KwargsT, core, depth, vs
 from vsrgtools import limit_filter
+from vstools import KwargsT, core, depth, vs
 
-from .f3kdb import F3kdb, SampleMode
+from .f3kdb import F3kdb
 
 __all__ = [
-    'dumb3kdb', 'f3kbilateral', 'f3kpf',
+    'f3kbilateral', 'f3kpf',
 
     'lfdeband'
 ]

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, cast
 from dataclasses import dataclass, field
+from typing import Any, cast
 
 from vstools import (
-    CustomIntEnum, CustomValueError, DataType, VSFunction, check_variable, clamp_arr, core, inject_self, normalize_seq,
-    vs, FuncExceptT, fallback
+    CustomIntEnum, CustomValueError, DataType, FuncExceptT, VSFunction, check_variable, clamp_arr, core, fallback,
+    inject_self, normalize_seq, vs
 )
 
 from .abstract import Debander, Grainer
