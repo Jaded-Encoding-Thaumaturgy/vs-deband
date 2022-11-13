@@ -106,7 +106,9 @@ class F3kdb(Debander, Grainer):
             sample_mode=self.sample_mode,
         ) | self.f3kdb_args
 
-        if self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
+        if self.new_neo:
+            deband = self._f3kdb_plugin(clip, y2=self.thy >> 3, cb2=self.thcb >> 3, cr2=self.thcr >> 3, **kwargs)
+        elif self.thy % self._step == 1 and self.thcb % self._step == 1 and self.thcr % self._step == 1:
             deband = self._f3kdb_plugin(clip, y=self.thy, cb=self.thcb, cr=self.thcr, **kwargs)
         else:
             loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
