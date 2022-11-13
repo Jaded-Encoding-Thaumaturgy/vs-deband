@@ -131,7 +131,7 @@ class F3kdb(Debander, Grainer):
         self.plugin = F3kdbPlugin.from_param(use_neo)
         self.sample_mode = self.plugin.check_sample_mode(sample_mode)
 
-        self.thy, self.thcb, self.thcr = clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak)
+        self.thrs = tuple[int, int, int](clamp_arr(normalize_seq(threshold), 1, self.plugin.thr_peak))
         self.gry, self.grc = normalize_seq(grain, 2)
 
     @inject_self
@@ -146,31 +146,22 @@ class F3kdb(Debander, Grainer):
         assert check_variable(clip, self.__class__.deband)
 
         kwargs = dict[str, Any](
-            range=self.radius,
-            grainy=self.gry,
-            grainc=self.grc,
-            sample_mode=self.sample_mode,
+            range=self.radius, grainy=self.gry, grainc=self.grc, sample_mode=self.sample_mode
         ) | self.f3kdb_args
 
-        if self.new_neo or all(x % self._step == 1 for x in (self.thy, self.thcb, self.thcr)):
+        if self.new_neo or all(x % self._step == 1 for x in self.thrs):
             return self.plugin.Deband(clip, self.thy, self.thcb, self.thcr, **kwargs)
 
-        loy, locb, locr = [(th - 1) // self._step * self._step + 1 for th in [self.thy, self.thcb, self.thcr]]
-        hiy, hicb, hicr = [lo + self._step for lo in [loy, locb, locr]]
+        lows = tuple[int, int, int]((th - 1) // self._step * self._step + 1 for th in self.thrs)
+        highs = tuple[int, int, int](lo + self._step for lo in lows)
 
-        lo_clip = self.plugin.Deband(clip, loy, locb, locr, **kwargs)
-        hi_clip = self.plugin.Deband(clip, hiy, hicb, hicr, **kwargs)
+        lo_clip = self.plugin.Deband(clip, *lows, **kwargs)
+        hi_clip = self.plugin.Deband(clip, *highs, **kwargs)
 
         if clip.format.color_family == vs.GRAY:
-            weight = [
-                (self.thy - loy) / self._step
-            ]
+            weight = [(self.thrs[0] - lows[0]) / self._step]
         else:
-            weight = [
-                (self.thy - loy) / self._step,
-                (self.thcb - locb) / self._step,
-                (self.thcr - locr) / self._step
-            ]
+            weight = [(thr - low) / self._step for thr, low in zip(self.thrs, lows)]
 
         return lo_clip.std.Merge(hi_clip, weight)
 
