@@ -8,7 +8,7 @@ from vstools import (
     inject_self, normalize_seq, vs
 )
 
-from .abstract import Debander, Grainer
+from .abstract import Debander
 
 __all__ = [
     'F3kdbPlugin', 'SampleMode',
@@ -95,8 +95,8 @@ class F3kdbPlugin(CustomIntEnum):
 
 
 @dataclass
-class F3kdb(Debander, Grainer):
-    """Debander, Grainer wrapper around the f3kdb plugin."""
+class F3kdb(Debander):
+    """Debander wrapper around the f3kdb plugin."""
 
     radius: int | None = None
     thr: int | tuple[int, int, int] | None = None

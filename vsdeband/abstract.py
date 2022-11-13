@@ -12,16 +12,6 @@ __all__ = [
 ]
 
 
-class Debander(ABC):
-    def __post_init__(self) -> None:
-        ...
-
-    @abstractmethod
-    @inject_self
-    def deband(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
-        ...
-
-
 class Grainer(ABC):
     def __post_init__(self) -> None:
         ...
@@ -29,4 +19,11 @@ class Grainer(ABC):
     @abstractmethod
     @inject_self
     def grain(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
+        ...
+
+
+class Debander(Grainer):
+    @abstractmethod
+    @inject_self
+    def deband(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
         ...

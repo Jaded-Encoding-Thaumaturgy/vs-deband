@@ -61,6 +61,8 @@ class PlaceboDither(CustomIntEnum):
 
 @dataclass
 class Placebo(Debander):
+    """Debander wrapper around libplacebo plugin's Deband function."""
+
     radius: float | None = None
     thr: float | list[float] | None = None
     grains: float | list[float] | None = None
@@ -122,3 +124,7 @@ class Placebo(Debander):
             return debs[0]
 
         return join(debs, clip.format.color_family)
+
+    @inject_self
+    def grain(self, clip: vs.VideoNode) -> vs.VideoNode:  # type: ignore[override]
+        raise NotImplementedError
