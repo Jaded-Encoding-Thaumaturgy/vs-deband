@@ -5,7 +5,7 @@ from typing import Any
 from vstools import KwargsT, core, depth, vs
 from vsrgtools import limit_filter
 
-from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
+from .f3kdb import F3kdb, SampleMode
 
 __all__ = [
     'dumb3kdb', 'f3kbilateral', 'f3kpf',
@@ -16,7 +16,7 @@ __all__ = [
 
 def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
              threshold: int | list[int] = 30, grain: int | list[int] = 0,
-             sample_mode: SAMPLEMODE | SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
+             sample_mode: SampleMode = SampleMode.SQUARE, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
     """Small convenience function for calling F3kdb().deband()."""
     return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
 
