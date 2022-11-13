@@ -64,7 +64,7 @@ class F3kdbPlugin(CustomIntEnum):
         )
 
         if self is F3kdbPlugin.NEO_NEW:
-            kwargs |= dict(y2=y >> 3, cb2=cb >> 3, cr2=cr >> 3)
+            kwargs |= dict(y2=max(1, y >> 3), cb2=max(1, cb >> 3), cr2=max(1, cr >> 3))
         else:
             kwargs |= dict(y=y, cb=cb, cr=cr)
 
@@ -188,5 +188,7 @@ class F3kdb(Debander, Grainer):
         :param clip:            Source clip
         :return:                Grained clip
         """
-        self.thy, self.thcr, self.thcb = (1, ) * 3
-        return self.deband(clip)
+
+        return self.plugin.Deband(
+            clip, 1, 1, 1, range=self.radius, grainy=self.gry, grainc=self.grc, sample_mode=self.sample_mode
+        )
