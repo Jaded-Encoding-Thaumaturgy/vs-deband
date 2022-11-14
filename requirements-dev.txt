@@ -1,6 +1,6 @@
 flake8==5.0.4
 mypy-extensions==0.4.3
-mypy==0.812
+mypy==0.990
 pycodestyle==2.9.1
 pyflakes==2.3.1
 typed-ast==1.5.4
