@@ -10,14 +10,9 @@ Install `vsdeband` with the following command:
 pip install vsdeband
 ```
 
-## Dependencies
+Or if you want the latest git version, install it with this command:
 
-vsdeband depends on the following third-party scripts:
-
-- [vstools](https://pypi.org/project/vstools/)
-- [vstools](https://pypi.org/project/vsrgtools/)
-
-And the following VapourSynth libraries:
-
-- [fmtconv](https://github.com/EleonoreMizo/fmtconv)
-- [vs-placebo](https://github.com/Lypheo/vs-placebo)
+```sh
+pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-deband.git
+```
+<br>
