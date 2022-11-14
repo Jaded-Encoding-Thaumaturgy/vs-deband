@@ -1,29 +1,32 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import cycle
 from math import ceil
-from typing import Any
+from typing import Any, SupportsFloat
 
-from vsexprtools import norm_expr
-from vskernels import Scaler, ScalerT, Spline64
+from vsexprtools import ExprOp, combine, norm_expr
+from vskernels import Catrom, Lanczos, Scaler, ScalerT, Spline64
 from vsmask.util import expand, inpand
-from vsrgtools import RemoveGrainMode, blur, limit_filter, removegrain
+from vsrgtools import RemoveGrainMode, RemoveGrainModeT, blur, limit_filter, removegrain
 from vstools import (
-    ColorRange, PlanesT, VSFunction, check_variable, core, depth, expect_bits, fallback, normalize_planes,
-    normalize_seq, scale_value, to_arr, vs
+    ColorRange, DitherType, PlanesT, VSFunction, check_variable, core, depth, disallow_variable_format,
+    disallow_variable_resolution, expect_bits, fallback, get_depth, get_prop, get_w, get_y, iterate, join,
+    normalize_planes, normalize_seq, scale_value, to_arr, vs
 )
 
 from .abstract import Debander
 from .f3kdb import F3kdb
 from .filters import guided_filter
-from .types import GuidedFilterMode
+from .mask import deband_detail_mask
+from .types import DebanderFN, GuidedFilterMode
 
 __all__ = [
     'mdb_bilateral',
 
-    'pfdeband',
+    'masked_deband',
 
-    'lfdeband',
+    'pfdeband', 'lfdeband',
 
     'guided_deband'
 ]
@@ -74,6 +77,28 @@ def mdb_bilateral(
         limit = debander.grain(limit, strength=grains)
 
     return depth(limit, bits)
+
+
+def masked_deband(
+    clip: vs.VideoNode, radius: int = 16,
+    thr: int | list[int] = 24, grains: int | list[int] = [12, 0],
+    sigma: float = 1.25, rxsigma: list[int] = [50, 220, 300],
+    pf_sigma: float | None = 1.25, brz: tuple[int, int] = (2500, 4500),
+    rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP,
+    debander: type[Debander] | Debander = F3kdb, **kwargs: Any
+) -> vs.VideoNode:
+    clip, bits = expect_bits(clip, 16)
+
+    if not isinstance(debander, Debander):
+        debander = debander()
+
+    deband_mask = deband_detail_mask(clip, sigma, rxsigma, pf_sigma, brz, rg_mode)
+
+    deband = debander.deband(clip, radius=radius, thr=thr, grains=grains, **kwargs)
+
+    masked = deband.std.MaskedMerge(clip, deband_mask)
+
+    return depth(masked, bits)
 
 
 def pfdeband(
