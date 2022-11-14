@@ -4,7 +4,7 @@ from pathlib import Path
 
 import setuptools
 
-package_name = 'debandshit'
+package_name = 'vsdeband'
 
 exec(Path(f'{package_name}/_metadata.py').read_text(), meta := dict[str, str]())
 
@@ -13,7 +13,7 @@ requirements = Path('requirements.txt').read_text()
 
 
 setuptools.setup(
-    name=f'vs-{package_name}',
+    name=package_name,
     version=meta['__version__'],
     author=meta['__author_name__'],
     author_email=meta['__author_email__'],
@@ -23,8 +23,8 @@ setuptools.setup(
     long_description=readme,
     long_description_content_type='text/markdown',
     project_urls={
-        'Source Code': 'https://github.com/Irrational-Encoding-Wizardry/vs-debandshit',
-        'Documentation': 'https://vsdebandshit.encode.moe/en/latest/',
+        'Source Code': 'https://github.com/Irrational-Encoding-Wizardry/vs-deband',
+        'Documentation': 'https://vsdeband.encode.moe/en/latest/',
         'Contact': 'https://discord.gg/qxTxVJGtst',
     },
     install_requires=requirements,

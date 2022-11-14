@@ -1,10 +1,3 @@
-"""
-    Various functions used for debanding.
-
-    This used to be the `debandshit` module written by Z4ST1N,
-    with some functions that were rarely (if ever) used removed because I can't reasonably maintain them.
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -36,7 +29,7 @@ def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
                  f3kdb_args: KwargsT | None = None,
                  limflt_args: KwargsT | None = None) -> vs.VideoNode:
     """
-    f3kbilateral: f3kdb multistage bilateral-esque filter from debandshit.
+    f3kbilateral: f3kdb multistage bilateral-esque filter from vsdeband.
 
     This function is more of a last resort for extreme banding.
     Recommend values are ~40-60 for y and c strengths.

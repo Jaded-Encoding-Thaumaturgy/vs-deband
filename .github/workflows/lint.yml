@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Running flake8
-        run: flake8 debandshit
+        run: flake8 vsdeband
       - name: Running mypy
         if: steps.dependencies.outcome == 'success'
-        run: mypy debandshit
+        run: mypy vsdeband
