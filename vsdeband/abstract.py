@@ -13,6 +13,11 @@ __all__ = [
 
 
 class Grainer(ABC):
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
+
+        super().__init__()
+
     def __post_init__(self) -> None:
         ...
 
