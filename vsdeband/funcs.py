@@ -1,21 +1,31 @@
 from __future__ import annotations
 
 from functools import partial
+from math import ceil
 from typing import Any
 
-from vsrgtools import blur, limit_filter
-from vstools import VSFunction, check_variable, core, depth, expect_bits, to_arr, vs
+from vsexprtools import norm_expr
 from vskernels import Scaler, ScalerT, Spline64
+from vsmask.util import expand, inpand
+from vsrgtools import RemoveGrainMode, blur, limit_filter, removegrain
+from vstools import (
+    ColorRange, PlanesT, VSFunction, check_variable, core, depth, expect_bits, fallback, normalize_planes,
+    normalize_seq, scale_value, to_arr, vs
+)
 
 from .abstract import Debander
 from .f3kdb import F3kdb
+from .filters import guided_filter
+from .types import GuidedFilterMode
 
 __all__ = [
     'mdb_bilateral',
 
     'pfdeband',
 
-    'lfdeband'
+    'lfdeband',
+
+    'guided_deband'
 ]
 
 
@@ -161,3 +171,45 @@ def lfdeband(
     out = clip.std.MergeDiff(dif)
 
     return depth(out, bits)
+
+
+def guided_deband(
+    clip: vs.VideoNode, radius=None, strength: float = 0.3,
+    thr: float | list[float] | None = None, mode: GuidedFilterMode = GuidedFilterMode.GRADIENT,
+    rad: int = 0, bin_thr: float | list[float] | None = 0, planes: PlanesT = None,
+    range_in: ColorRange | None = None, **kwargs
+) -> vs.VideoNode:
+    assert check_variable(clip, guided_deband)
+
+    planes = normalize_planes(clip, planes)
+
+    range_in = ColorRange.from_param(range_in) or ColorRange.from_video(clip)
+
+    rad = fallback(rad, ceil(clip.height / 540))
+
+    if bin_thr is None:
+        if clip.format.sample_type is vs.FLOAT:
+            bin_thr = 1.5 / 255 if range_in.is_full else [1.5 / 219, 1.5 / 224]
+        else:
+            bin_thr = scale_value(0.005859375, 32, scale_value)
+
+    bin_thr = normalize_seq(bin_thr, clip.format.num_planes)
+
+    deband = guided_filter(clip, None, radius, strength, mode, planes=planes, **kwargs)
+
+    if thr:
+        deband = limit_filter(deband, clip, thr=list(map(int, to_arr(thr))))
+
+    if rad:
+        rmask = norm_expr([expand(clip, rad), inpand(clip, rad)], 'x y -', planes)
+
+        if bin_thr and max(bin_thr) > 0:
+            rmask = rmask.std.Binarize(threshold=bin_thr, planes=planes)
+
+        rmask = removegrain(rmask, RemoveGrainMode.OPP_CLIP_AVG_FAST)
+        rmask = removegrain(rmask, RemoveGrainMode.SQUARE_BLUR)
+        rmask = removegrain(rmask, RemoveGrainMode.MIN_SHARP)
+
+        deband = deband.std.MaskedMerge(clip, rmask, planes=planes)
+
+    return deband
