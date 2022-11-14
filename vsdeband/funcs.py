@@ -1,25 +1,23 @@
 from __future__ import annotations
 
 from functools import partial
-from itertools import cycle
 from math import ceil
-from typing import Any, SupportsFloat
+from typing import Any
 
-from vsexprtools import ExprOp, combine, norm_expr
-from vskernels import Catrom, Lanczos, Scaler, ScalerT, Spline64
+from vsexprtools import norm_expr
+from vskernels import Scaler, ScalerT, Spline64
 from vsmask.util import expand, inpand
 from vsrgtools import RemoveGrainMode, RemoveGrainModeT, blur, limit_filter, removegrain
 from vstools import (
-    ColorRange, DitherType, PlanesT, VSFunction, check_variable, core, depth, disallow_variable_format,
-    disallow_variable_resolution, expect_bits, fallback, get_depth, get_prop, get_w, get_y, iterate, join,
-    normalize_planes, normalize_seq, scale_value, to_arr, vs
+    ColorRange, PlanesT, VSFunction, check_variable, core, depth, expect_bits, fallback, normalize_planes,
+    normalize_seq, scale_value, to_arr, vs
 )
 
 from .abstract import Debander
 from .f3kdb import F3kdb
 from .filters import guided_filter
 from .mask import deband_detail_mask
-from .types import DebanderFN, GuidedFilterMode
+from .types import GuidedFilterMode
 
 __all__ = [
     'mdb_bilateral',
