@@ -2,26 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from vstools import KwargsT, core, depth, vs
 from vsrgtools import limit_filter
+from vstools import KwargsT, core, depth, vs
 
-from .f3kdb import SAMPLEMODE, F3kdb, SampleMode
-from .placebo import Placebo
+from .f3kdb import F3kdb
 
 __all__ = [
-    'dumb3kdb', 'f3kbilateral', 'f3kpf',
+    'f3kbilateral', 'f3kpf',
 
-    'lfdeband',
-
-    'placebo_deband'
+    'lfdeband'
 ]
-
-
-def dumb3kdb(clip: vs.VideoNode, radius: int = 16,
-             threshold: int | list[int] = 30, grain: int | list[int] = 0,
-             sample_mode: SAMPLEMODE | SampleMode = 2, use_neo: bool = False, **kwargs: Any) -> vs.VideoNode:
-    """Small convenience function for calling F3kdb().deband()."""
-    return F3kdb(radius, threshold, grain, sample_mode, use_neo, **kwargs).deband(clip)
 
 
 def f3kbilateral(clip: vs.VideoNode, radius: int = 16,
@@ -156,9 +146,3 @@ def lfdeband(clip: vs.VideoNode, radius: int = 30,
     dif = core.resize.Spline64(ddif, w, h)
     out = core.std.MergeDiff(clip, dif)
     return depth(out, bits)
-
-
-def placebo_deband(clip: vs.VideoNode, radius: float = 16.0, threshold: float | list[float] = 4.0,
-                   iterations: int = 1, grain: float | list[float] = 6.0, **kwargs: Any) -> vs.VideoNode:
-    """Small convenience function for calling Placebo().deband()."""
-    return Placebo(radius, threshold, iterations, grain, **kwargs).deband(clip)

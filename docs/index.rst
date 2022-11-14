@@ -48,7 +48,7 @@ Check out the `how to contribute <contribute>` section!
     :caption: Functions
     :titlesonly:
 
-    submodules/debanders
+    submodules/funcs
     submodules/f3kdb
     submodules/placebo
 
