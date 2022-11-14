@@ -6,11 +6,12 @@ from typing import Any
 
 from vsexprtools import norm_expr
 from vskernels import Scaler, ScalerT, Spline64
+from vsdenoise import Prefilter
 from vsmask.util import expand, inpand
-from vsrgtools import RemoveGrainMode, RemoveGrainModeT, blur, limit_filter, removegrain
+from vsrgtools import RemoveGrainMode, RemoveGrainModeT, limit_filter, removegrain
 from vstools import (
-    ColorRange, PlanesT, VSFunction, check_variable, core, depth, expect_bits, fallback, normalize_planes,
-    normalize_seq, scale_value, to_arr, vs
+    ColorRange, PlanesT, VSFunction, check_variable, depth, expect_bits, fallback, normalize_planes, normalize_seq,
+    scale_value, to_arr, vs
 )
 
 from .abstract import Debander
@@ -24,7 +25,7 @@ __all__ = [
 
     'masked_deband',
 
-    'pfdeband', 'lfdeband',
+    'pfdeband',
 
     'guided_deband'
 ]
@@ -102,15 +103,13 @@ def masked_deband(
 def pfdeband(
     clip: vs.VideoNode, radius: int = 16,
     thr: int | list[int] = 30, grains: int | list[int] = 0,
-    lthr: int | tuple[int, int] = [76, 0], elast: float = 2.5,
-    bright_thr: int | None = None, prefilter: VSFunction = partial(blur, radius=2),
+    lthr: int | tuple[int, int] = (76, 0), elast: float = 2.5,
+    bright_thr: int | None = None, scaler: ScalerT = Spline64,
+    prefilter: Prefilter | VSFunction = partial(Prefilter.SCALEDBLUR, scale=1, radius=2),
     debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:
     """
-    pfdeband is a simple prefilter `by mawen1250 <https://www.nmm-hd.org/newbbs/viewtopic.php?f=7&t=1495#p12163.`>_
-
-    The default prefilter is a straight gaussian+average blur, so the effect becomes very strong very fast.
-    Functions more or less like GradFun3 without the detail mask.
+    Prefilter and deband a clip.
 
     :param clip:        Input clip.
     :param radius:      Banding detection range.
@@ -131,67 +130,25 @@ def pfdeband(
     if not isinstance(debander, Debander):
         debander = debander()
 
-    try:
-        blur = prefilter(clip, planes=0, **kwargs)
-    except Exception:
-        blur = prefilter(clip, **kwargs)
-
-    diff = core.std.MakeDiff(clip, blur)
-
-    deband = debander.deband(blur, radius=radius, thr=thr, grains=grains)
-
-    limit = limit_filter(deband, blur, thr=lthr, elast=elast, bright_thr=bright_thr)
-
-    return limit.std.MergeDiff(diff)
-
-
-def lfdeband(
-    clip: vs.VideoNode, radius: int = 30, thr: int | list[int] = 80,
-    grains: int | list[int] = 0, scale: int = 2,
-    scaler: ScalerT = Spline64, upscaler: ScalerT | None = None,
-    debander: type[Debander] | Debander = F3kdb
-) -> vs.VideoNode:
-    """
-    A simple debander that debands at a downscaled resolution congruent to the chroma size.
-
-    :param clip:        Input clip.
-    :param radius:      Banding detection range.
-    :param thr:         Banding detection thr(s) for planes.
-    :param grains:      Specifies amount of grains added in the last debanding stage.
-    :param scale:       Scale to which downscale the clip for processing.
-    :param scaler:      Scaler used to downscale the clip before processing.
-    :param upscaler:    Scaler used to reupscale the difference up to original size.
-                        If ``None``, ``scaler`` will be used.
-    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
-
-    :return:            Debanded clip.
-    """
-
-    assert check_variable(clip, lfdeband)
-
-    if not isinstance(debander, Debander):
-        debander = debander()
-
-    scaler = Scaler.ensure_obj(scaler, lfdeband)
-    upscaler = scaler.ensure_obj(upscaler, lfdeband)
-
-    wss, hss = 1 << clip.format.subsampling_w, 1 << clip.format.subsampling_h
-
-    w, h = clip.width, clip.height
-
-    dw, dh = round(w / scale), round(h / scale)
+    scaler = Scaler.ensure_obj(scaler, pfdeband)
 
     clip, bits = expect_bits(clip, 16)
 
-    dsc = scaler.scale(clip, dw - dw % wss, dh - dh % hss)
+    blur = prefilter(clip, **kwargs)
+    change_res = (blur.width, blur.height) != (clip.width, clip.height)
 
     deband = debander.deband(blur, radius=radius, thr=thr, grains=grains)
 
-    ddif = deband.std.MakeDiff(dsc)
+    out = deband if change_res else clip
 
-    dif = upscaler.Spline64(ddif, w, h)
+    diff = out.std.MakeDiff(blur)
 
-    out = clip.std.MergeDiff(dif)
+    if change_res:
+        diff = scaler.scale(diff, clip.width, clip.height)
+    else:
+        out = limit_filter(deband, blur, thr=lthr, elast=elast, bright_thr=bright_thr)
+
+    out = out.std.MergeDiff(diff)
 
     return depth(out, bits)
 
