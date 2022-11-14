@@ -71,7 +71,7 @@ def mdb_bilateral(
     limit = limit_filter(db3, db2, clip, thr=lthr, elast=elast, bright_thr=bright_thr)
 
     if grains:
-        limit = debander.grain(limit, grains=grains)
+        limit = debander.grain(limit, strength=grains)
 
     return depth(limit, bits)
 

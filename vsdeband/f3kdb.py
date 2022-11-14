@@ -188,7 +188,7 @@ class F3kdb(Debander):
 
     @inject_self
     def grain(
-        self, clip: vs.VideoNode, grains: int | list[int] = 4, radius: int = 16,
+        self, clip: vs.VideoNode, strength: int | list[int] = 4, radius: int = 16,
         sample_mode: SampleMode = SampleMode.SQUARE
     ) -> vs.VideoNode:  # type: ignore[override]
         """
@@ -204,6 +204,6 @@ class F3kdb(Debander):
 
         sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
 
-        gry, grc = normalize_seq(fallback(self.grains, grains), 2)
+        gry, grc = normalize_seq(fallback(self.grains, strength), 2)
 
         return self.plugin.Deband(clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode)
