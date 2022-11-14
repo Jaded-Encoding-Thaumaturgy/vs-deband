@@ -46,11 +46,11 @@ class ChickenDream(Grainer):
     ) -> vs.VideoNode:
         assert check_variable(clip, self.__class__.grain)
 
-        if isinstance(strength, tuple):
+        if not isinstance(strength, int | float):
             if clip.format.num_planes > 1:
                 str_luma, str_chroma = strength
 
-                args = (rad, res, luma_scaling, seed, draft, matrix, kernel)
+                args = (rad, res, luma_scaling, seed, draft, coarsharp, matrix, kernel)
 
                 if str_luma > 0 and str_chroma > 0:
                     return join(
