@@ -154,7 +154,7 @@ def pfdeband(
 
 
 def guided_deband(
-    clip: vs.VideoNode, radius=None, strength: float = 0.3,
+    clip: vs.VideoNode, radius: int | list[int] | None = None, strength: float = 0.3,
     thr: float | list[float] | None = None, mode: GuidedFilterMode = GuidedFilterMode.GRADIENT,
     rad: int = 0, bin_thr: float | list[float] | None = 0, planes: PlanesT = None,
     range_in: ColorRange | None = None, **kwargs
