@@ -70,13 +70,11 @@ class Placebo(Debander):
     iterations: int | None = None
 
     dither: PlaceboDither | None = None
-    renderer: bool | None = None
 
     @inject_self
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
-        iterations: int = 1, grains: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT,
-        renderer: bool = False
+        iterations: int = 1, grains: float | list[float] = 6.0, dither: PlaceboDither = PlaceboDither.DEFAULT
     ) -> vs.VideoNode:
         """
         Main deband function, wrapper for `placebo.Deband <https:/github.com/Lypheo/vs-placebo#vs-placebo>`_
@@ -101,7 +99,6 @@ class Placebo(Debander):
                                 in a very big change to the brightness level.
                                 It's recommended to either scale this value down or disable it entirely for HDR.
         :param dither:          Specify what kind of Placebo dithering will be used.
-        :param renderer:        Make libplacebo Deband use the renderer API over the normal API.
 
         :return:                Debanded clip
         """
@@ -113,10 +110,9 @@ class Placebo(Debander):
         iterations = fallback(self.iterations, iterations)
         grains = normalize_seq(fallback(self.grains, grains))  # type: ignore[arg-type]
         dither = fallback(self.dither, dither)
-        renderer = fallback(self.renderer, renderer)
 
         debs = [
-            p.placebo.Deband(1, iterations, thr, radius, gra, **dither.placebo_args, renderer_api=renderer)
+            p.placebo.Deband(1, iterations, thr, radius, gra, **dither.placebo_args)
             for p, thr, gra in zip(split(clip), thr, grains)
         ]
 
