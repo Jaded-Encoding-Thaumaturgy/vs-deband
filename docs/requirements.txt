@@ -3,7 +3,7 @@ Babel==2.10.1
 certifi==2021.10.8
 chardet==4.0.0
 charset-normalizer==2.0.12
-colorama==0.4.4
+colorama==0.4.6
 commonmark==0.9.1
 docutils==0.17.1
 idna==3.3
