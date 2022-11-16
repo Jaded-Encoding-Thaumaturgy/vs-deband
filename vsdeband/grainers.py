@@ -21,7 +21,9 @@ __all__ = [
 
 class AddGrain(Grainer):
     @inject_self.cached
-    def grain(self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any) -> vs.VideoNode:
+    def grain(  # type: ignore[override]
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any
+    ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
         return core.grain.Add(clip, luma, chroma, **(self.kwargs | kwargs))
@@ -29,7 +31,9 @@ class AddGrain(Grainer):
 
 class AddNoise(Grainer):
     @inject_self.cached
-    def grain(self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any) -> vs.VideoNode:
+    def grain(  # type: ignore[override]
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any
+    ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
         return core.noise.Add(clip, luma, chroma, **(self.kwargs | kwargs))
@@ -37,7 +41,7 @@ class AddNoise(Grainer):
 
 class ChickenDream(Grainer):
     @inject_self.cached
-    def grain(
+    def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float] = 0.35,
         rad: float = 0.025, res: int = 1024, luma_scaling: float = 10,
         seed: int = 42069, draft: bool = True, coarsharp: bool | float = 1.0,

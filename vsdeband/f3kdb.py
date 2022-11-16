@@ -118,17 +118,17 @@ class F3kdb(Debander):
         self.plugin = F3kdbPlugin.from_param(self.use_neo)
 
     @inject_self
-    def deband(
+    def deband(  # type: ignore[override]
         self, clip: vs.VideoNode,
         radius: int = 16,
         thr: int | tuple[int, int, int] = 30,
         grains: int | list[int] = 0,
         sample_mode: SampleMode = SampleMode.SQUARE,
-        seed: int = None,
-        dynamic_grain: int = None,
-        dither_algo: int = None,
+        seed: int | None = None,
+        dynamic_grain: int | None = None,
+        dither_algo: int | None = None,
         blur_first: bool | None = None
-    ) -> vs.VideoNode:  # type: ignore[override]
+    ) -> vs.VideoNode:
         """
         Main deband function
 
@@ -168,7 +168,11 @@ class F3kdb(Debander):
         gry, grc = normalize_seq(fallback(self.grains, grains), 2)
 
         step = sample_mode.step
-        kwargs = dict[str, Any](range=radius, grainy=gry, grainc=grc, sample_mode=sample_mode)
+        kwargs = dict[str, Any](
+            range=radius, grainy=gry, grainc=grc, sample_mode=sample_mode,
+            seed=fallback(seed, self.seed), dynamic_grain=fallback(dynamic_grain, self.dynamic_grain),
+            dither_algo=fallback(dither_algo, self.dither_algo), blur_first=fallback(blur_first, self.blur_first)
+        )
 
         if self.plugin is F3kdbPlugin.NEO_NEW or all(x % sample_mode.step == 1 for x in thrs):
             return self.plugin.Deband(clip, *thrs, **kwargs)
@@ -187,10 +191,10 @@ class F3kdb(Debander):
         return lo_clip.std.Merge(hi_clip, weight)
 
     @inject_self
-    def grain(
-        self, clip: vs.VideoNode, strength: int | list[int] = 4, radius: int = 16,
+    def grain(  # type: ignore[override]
+        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, radius: int = 16,
         sample_mode: SampleMode = SampleMode.SQUARE
-    ) -> vs.VideoNode:  # type: ignore[override]
+    ) -> vs.VideoNode:
         """
         Add f3kdb grain to the clip.
 
@@ -206,4 +210,6 @@ class F3kdb(Debander):
 
         gry, grc = normalize_seq(fallback(self.grains, strength), 2)
 
-        return self.plugin.Deband(clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode)
+        return self.plugin.Deband(  # type: ignore[call-overload,no-any-return]
+            clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode
+        )

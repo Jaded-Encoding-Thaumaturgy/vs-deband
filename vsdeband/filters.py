@@ -8,7 +8,7 @@ from vskernels import Bilinear, Point, Scaler, ScalerT
 from vsrgtools import box_blur, gauss_blur
 from vstools import (
     ColorRange, ColorRangeT, PlanesT, check_ref_clip, check_variable, cround, depth, expect_bits, normalize_planes,
-    normalize_seq, vs, get_plane_sizes
+    normalize_seq, vs, get_plane_sizes, get_prop
 )
 
 from .types import GuidedFilterMode
@@ -127,13 +127,14 @@ def guided_filter(
                     planes, thr=thr
                 )
             else:
-                def _gradient(n, f):
-                    frameMean = f.props.PlaneStatsAverage
+                def _gradient(n: int, f: vs.VideoFrame) -> vs.VideoNode:
+                    frameMean = get_prop(f, 'PlaneStatsAverage', int, float)
 
                     return norm_expr(
                         [cov_Ip, weight_in, weight, var_I],
                         'x {thr} 1 1 1 {kk} y {alpha} - * exp + / - * z / + a {thr} z / + /',
-                        planes, thr=thr, kk=-4 / (f.props.PlaneStatsMin - frameMean - 1e-6), alpha=frameMean
+                        planes, thr=thr, alpha=frameMean,
+                        kk=-4 / (get_prop(f, 'PlaneStatsMin', int, float) - frameMean - 1e-6)
                     )
 
                 a = weight.std.FrameEval(_gradient, weight_in)

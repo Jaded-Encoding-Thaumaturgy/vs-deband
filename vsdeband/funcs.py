@@ -33,8 +33,8 @@ __all__ = [
 
 def mdb_bilateral(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 65, grains: int | list[int] = 0,
-    lthr: int | tuple[int, int] = [153, 0], elast: float = 3.0,
+    thr: int | list[int] = 65, grains: int | tuple[int, int] = 0,
+    lthr: int | tuple[int, int] = (153, 0), elast: float = 3.0,
     bright_thr: int | None = None,
     debander: type[Debander] | Debander = F3kdb
 ) -> vs.VideoNode:
@@ -157,7 +157,7 @@ def guided_deband(
     clip: vs.VideoNode, radius: int | list[int] | None = None, strength: float = 0.3,
     thr: float | list[float] | None = None, mode: GuidedFilterMode = GuidedFilterMode.GRADIENT,
     rad: int = 0, bin_thr: float | list[float] | None = 0, planes: PlanesT = None,
-    range_in: ColorRange | None = None, **kwargs
+    range_in: ColorRange | None = None, **kwargs: Any
 ) -> vs.VideoNode:
     assert check_variable(clip, guided_deband)
 
@@ -171,14 +171,14 @@ def guided_deband(
         if clip.format.sample_type is vs.FLOAT:
             bin_thr = 1.5 / 255 if range_in.is_full else [1.5 / 219, 1.5 / 224]
         else:
-            bin_thr = scale_value(0.005859375, 32, scale_value)
+            bin_thr = scale_value(0.005859375, 32, clip, range_in)
 
     bin_thr = normalize_seq(bin_thr, clip.format.num_planes)
 
     deband = guided_filter(clip, None, radius, strength, mode, planes=planes, **kwargs)
 
     if thr:
-        deband = limit_filter(deband, clip, thr=list(map(int, to_arr(thr))))
+        deband = limit_filter(deband, clip, thr=tuple(map(int, to_arr(thr))))  # type: ignore
 
     if rad:
         rmask = norm_expr([expand(clip, rad), inpand(clip, rad)], 'x y -', planes)
