@@ -192,8 +192,8 @@ class F3kdb(Debander):
 
     @inject_self
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, radius: int = 16,
-        sample_mode: SampleMode = SampleMode.SQUARE
+        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, static: bool = False,
+        radius: int = 16, sample_mode: SampleMode = SampleMode.SQUARE
     ) -> vs.VideoNode:
         """
         Add f3kdb grain to the clip.

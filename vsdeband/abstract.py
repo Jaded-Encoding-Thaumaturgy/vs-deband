@@ -6,9 +6,9 @@ from typing import Any
 from vstools import inject_self, vs
 
 __all__ = [
-    'Debander',
+    'Grainer', 'DynamicGrainer',
 
-    'Grainer'
+    'Debander'
 ]
 
 
@@ -27,7 +27,16 @@ class Grainer(ABC):
         ...
 
 
-class Debander(Grainer):
+class DynamicGrainer(Grainer):
+    @abstractmethod
+    @inject_self
+    def grain(  # type: ignore[override]
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
+    ) -> vs.VideoNode:
+        ...
+
+
+class Debander(DynamicGrainer):
     @abstractmethod
     @inject_self
     def deband(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:

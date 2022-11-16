@@ -9,7 +9,7 @@ from vstools import (
     plane, vs, inject_self, get_video_format
 )
 
-from .abstract import Grainer
+from .abstract import Grainer, DynamicGrainer
 from .mask import adg_mask
 
 __all__ = [
@@ -19,24 +19,24 @@ __all__ = [
 ]
 
 
-class AddGrain(Grainer):
+class AddGrain(DynamicGrainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
     ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
-        return core.grain.Add(clip, luma, chroma, **(self.kwargs | kwargs))
+        return core.grain.Add(clip, luma, chroma, constant=static, **(self.kwargs | kwargs))
 
 
-class AddNoise(Grainer):
+class AddNoise(DynamicGrainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
     ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
-        return core.noise.Add(clip, luma, chroma, **(self.kwargs | kwargs))
+        return core.noise.Add(clip, luma, chroma, constant=static, **(self.kwargs | kwargs))
 
 
 class ChickenDream(Grainer):

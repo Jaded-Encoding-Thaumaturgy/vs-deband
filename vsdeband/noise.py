@@ -11,8 +11,8 @@ from vstools import (
 )
 
 from .mask import adg_mask
-from .abstract import Grainer, Debander
-from .grainers import AddGrain, AddNoise, ChickenDream
+from .abstract import Grainer, Debander, DynamicGrainer
+from .grainers import AddGrain, AddNoise
 
 __all__ = [
     'adaptive_grain',
@@ -98,8 +98,8 @@ def sized_grain(
     if not isinstance(grainer, Debander):
         kwargs |= dict(seed=seed)
 
-        if not isinstance(grainer, ChickenDream):
-            kwargs |= dict(constant=static)
+    if isinstance(grainer, DynamicGrainer):
+        kwargs |= dict(static=static)
 
     if not supports_size:
         if size != 1:

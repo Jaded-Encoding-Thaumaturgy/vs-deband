@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from vstools import CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, normalize_seq, split, vs
 
@@ -122,5 +123,7 @@ class Placebo(Debander):
         return join(debs, clip.format.color_family)
 
     @inject_self
-    def grain(self, clip: vs.VideoNode, strength: float | tuple[int, int]) -> vs.VideoNode:  # type: ignore[override]
+    def grain(  # type: ignore[override]
+        self, clip: vs.VideoNode, strength: float | tuple[int, int], static: bool = False, **kwargs: Any
+    ) -> vs.VideoNode:
         raise NotImplementedError
