@@ -24,6 +24,23 @@ def guided_filter(
     use_gauss: bool = False, planes: PlanesT = None, range_in: ColorRangeT | None = None,
     down_ratio: int = 0, downscaler: ScalerT = Point, upscaler: ScalerT = Bilinear
 ) -> vs.VideoNode:
+    """
+    @@@
+
+    :param clip:        Input clip.
+    :param guidance:
+    :param radius:
+    :param thr:
+    :param mode:
+    :param use_gauss:
+    :param planes:      Planes to process.
+    :param range_in:    Color Range of the input clip.
+    :param down_ratio:
+    :param downscaler:  Scaler to use while downscaling the clip.
+    :param upscaler:    Scaler to use while upscaling the clip.
+
+    :return:            Clip.
+    """
     assert check_variable(clip, guided_filter)
 
     planes = normalize_planes(clip, planes)

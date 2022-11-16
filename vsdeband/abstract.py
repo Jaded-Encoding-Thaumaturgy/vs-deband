@@ -13,6 +13,8 @@ __all__ = [
 
 
 class Grainer(ABC):
+    """Base Grainer class."""
+
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
@@ -28,6 +30,8 @@ class Grainer(ABC):
 
 
 class Debander(Grainer):
+    """Debander class."""
+
     @abstractmethod
     @inject_self
     def deband(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:

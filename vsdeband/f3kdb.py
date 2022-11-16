@@ -18,31 +18,58 @@ __all__ = [
 
 
 class SampleMode(CustomIntEnum):
+    """Sampling mode for F3kdb."""
+
     COLUMN = 1
+    """Sample by pixel columns. @@@"""
+
     SQUARE = 2
+    """Sample by a 3x3 square around the centre pixel. @@@"""
+
     ROW = 3
+    """Sample by pixel rows. @@@"""
+
     COL_ROW_MEAN = 4
+    """Samples using the mean of COLUMN and ROW."""
 
     @property
     def step(self) -> int:
+        """Steps to take for the sampling."""
+
         return 16 if self is SampleMode.SQUARE else 32
 
 
 class F3kdbPlugin(CustomIntEnum):
+    """Verify F3kdb settings, namespaces, peaks, etc."""
+
     OLD = 0
+    """
+    Use the original flash3kyuu_deband (F3kdb) plugin.
+    `Plugin <https://f3kdb.readthedocs.io/en/latest/>_
+    """
+
     NEO = 1
+    """
+    Use the HomeOfAviSynthPlusEvolution F3kdb implementation.
+    `Plugin <https://github.com/HomeOfAviSynthPlusEvolution/neo_f3kdb>`_
+    """
+
     NEO_NEW = 2
+    """Use more accurate thresholding and settings for NEO. Requires >R8."""
 
     @property
     def is_neo(self) -> bool:
+        """Verify whether the plugin is a neo F3kdb implementation."""
         return self is not F3kdbPlugin.OLD
 
     @property
     def thr_peak(self) -> int:
+        """Return peak allowed by F3kdb plugin."""
         return 511 >> (3 if self is F3kdbPlugin.NEO_NEW else 0)
 
     @property
     def namespace(self) -> vs.Plugin:
+        """Return namespace of the used F3kdb plugin."""
         return core.neo_f3kdb if self.is_neo else core.f3kdb
 
     @inject_self.with_args(None)
@@ -56,6 +83,12 @@ class F3kdbPlugin(CustomIntEnum):
         random_algo_ref: int | None = None, random_algo_grain: int | None = None,
         random_param_ref: float | None = None, random_param_grain: float | None = None
     ) -> vs.VideoNode:
+        """
+        @@@
+        Perform F3kdb debanding, scaling thresholds depending on the F3kdb implementation used.
+
+        For a full list of parameters and usage, see :py:func:`vsdeband.f3kdb.F3kdb.deband`.
+        """
         kwargs = dict(
             range=range, grainy=grainy, grainc=grainc, sample_mode=sample_mode, seed=seed,
             blur_first=blur_first, dynamic_grain=dynamic_grain, random_param_grain=random_param_grain,
@@ -73,6 +106,7 @@ class F3kdbPlugin(CustomIntEnum):
 
     @classmethod
     def from_param(cls, use_neo: bool | None) -> F3kdbPlugin:  # type: ignore[override]
+        """Determine what F3kdb implementation gets used based on params passed."""
         if use_neo is None:
             use_neo = hasattr(core, 'neo_f3kdb')
 
@@ -85,9 +119,10 @@ class F3kdbPlugin(CustomIntEnum):
         return F3kdbPlugin.NEO
 
     def check_sample_mode(self, sample_mode: SampleMode, func: FuncExceptT | None = None) -> SampleMode:
+        """Check whether a given sample mode can be used with the F3kdb implementation used."""
         if sample_mode > SampleMode.SQUARE and not self.is_neo:
             raise CustomValueError(
-                'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
+                'Regular fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
                 func or self.__class__.check_sample_mode
             )
 
@@ -141,9 +176,12 @@ class F3kdb(Debander):
         This function aimed to average n and n + 1 strength for better debanding accuracy.
 
         :param radius:          Banding detection range.
-        :param thr:             Banding detection thr(s) for planes.
-        :param grain:           Specifies amount of grains added in the last debanding stage.
-        :param sample_mode:     Valid modes are:
+        :param thr:             Banding detection threshold(s) per plane.
+                                If you pass an int, the threshold will be applied to every plane.
+                                If you pass a tuple, different strengths will be applied per plane.
+                                If you pass two ints in a tuple, the last value will be copied to the third plane.
+        :param grains:          Specifies amount of grain to add during the final graining stage.
+        :param sample_mode:     Sampling mode for debanding.
                                 * SampleMode.COLUMN: Take 2 pixels as reference pixel.
                                   Reference pixels are in the same column of current pixel.
                                 * SampleMode.SQUARE: Take 4 pixels as reference pixel.
@@ -154,6 +192,11 @@ class F3kdb(Debander):
                                 * SampleMode.COL_ROW_MEAN: Arithmetic mean of COLUMN and ROW.
                                   Reference points are randomly picked within the range.
                                   Only `neo_f3kdb` supports it.
+        :param seed:            Seed used for graining. Currently unused.
+        :param dynamic_grain:   If True, apply dynamic grain during the graining stage.
+                                Else, static grain is applied. Currently unused.
+        :param dither_algo:     Dither algorithm to use for the graining stage. Currently unused.
+        :param blur_first:      Whether to blur prior to debanding. Currently unused. @@@
 
         :return:                Debanded clip.
         """
@@ -192,12 +235,16 @@ class F3kdb(Debander):
         sample_mode: SampleMode = SampleMode.SQUARE
     ) -> vs.VideoNode:  # type: ignore[override]
         """
-        Add f3kdb grain to the clip.
+        Add f3kdb grain to a clip.
+        This necessitates very weak debanding is applied to the clip.
 
         :param clip:            Source clip
-        :param grains:          Specifies amount of grains added in the last debanding stage.
+        :param strength:        Specifies amount of grain to add during graining.
+        :param radius:          Radius for F3kdb.
+        :param sample_mode:     Sampling mode for debanding.
+                                See :py:func:`vsdeband.f3kdb.F3kdb.deband` for more information.
 
-        :return:                Grained clip
+        :return:                Grained clip.
         """
 
         radius = fallback(self.radius, radius)

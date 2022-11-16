@@ -34,7 +34,7 @@ __all__ = [
 def mdb_bilateral(
     clip: vs.VideoNode, radius: int = 16,
     thr: int | list[int] = 65, grains: int | list[int] = 0,
-    lthr: int | tuple[int, int] = [153, 0], elast: float = 3.0,
+    lthr: int | list[int] = [153, 0], elast: float = 3.0,
     bright_thr: int | None = None,
     debander: type[Debander] | Debander = F3kdb
 ) -> vs.VideoNode:
@@ -44,17 +44,20 @@ def mdb_bilateral(
     This function is more of a last resort for extreme banding.
     Recommend values are ~40-60 for luma and chroma strengths.
 
-    :param clip:        Input clip.
-    :param radius:      Banding detection range.
-    :param thr:         Banding detection thr(s) for planes.
-    :param grains:      Specifies amount of grains added in the last debanding stage.
-                        It happens after `vsrgtools.limit_filter`.
-    :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
-    :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
-    :param bright_thr:  Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
-    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
+    :param clip:            Input clip.
+    :param radius:          Banding detection range.
+    :param thr:             Banding detection threshold(s) per plane.
+                            If you pass an int, the threshold will be applied to every plane.
+                            If you pass a tuple, different strengths will be applied per plane.
+                            If you pass two ints in a tuple, the last value will be copied to the third plane.
+    :param grains:          Specifies amount of grain to add during the final graining stage.
+                            This gets performed after `vsrgtools.limit_filter`.
+    :param lthr:            Limiting threshold. Refer to `vsrgtools.limit_filter`.
+    :param elast:           Limiting elasticity. Refer to `vsrgtools.limit_filter`.
+    :param bright_thr:      Limiting of bright areas. Refer to `vsrgtools.limit_filter`.
+    :param debander:        Debander to use. You can pass an instance with custom arguments.
 
-    :return:            Debanded clip.
+    :return:                Debanded clip.
     """
 
     assert check_variable(clip, mdb_bilateral)
@@ -86,6 +89,25 @@ def masked_deband(
     rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP,
     debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:
+    """
+    Perform debanding with an additional detail mask applied to limit damage.
+
+    :param clip:            Input clip.
+    :param radius:          Banding detection range.
+    :param thr:             Banding detection threshold(s) per plane.
+                            If you pass an int, the threshold will be applied to every plane.
+                            If you pass a tuple, different strengths will be applied per plane.
+                            If you pass two ints in a tuple, the last value will be copied to the third plane.
+    :param grains:          Specifies amount of grain to add during the final graining stage.
+    :param sigma:           Sigma of :py:func:`vsdeband.mask.deband_detail_mask`.
+    :param rxsigma:         RXSigma of :py:func:`vsdeband.mask.deband_detail_mask`.
+    :param pf_sigma:        Prefilter sigma of :py:func:`vsdeband.mask.deband_detail_mask`.
+    :param brz:             Binarizing threshold of :py:func:`vsdeband.mask.deband_detail_mask`.
+    :param rg_mode:         Removegrain mode of :py:func:`vsdeband.mask.deband_detail_mask`.
+    :param debander:        Debander to use. You can pass an instance with custom arguments.
+
+    :return:                Debanded clip with original detail masked back.
+    """
     clip, bits = expect_bits(clip, 16)
 
     if not isinstance(debander, Debander):
@@ -111,18 +133,22 @@ def pfdeband(
     """
     Prefilter and deband a clip.
 
-    :param clip:        Input clip.
-    :param radius:      Banding detection range.
-    :param thr:         Banding detection thr(s) for planes.
-    :param grains:      Specifies amount of grains added in the last debanding stage.
-                        It happens after `vsrgtools.limit_filter`.
-    :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
-    :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
-    :param bright_thr:  Limiting over the bright areas. Refer to `vsrgtools.limit_filter`.
-    :param prefilter:   Prefilter used to blur the clip before debanding.
-    :param debander:    Specify what Debander to use. You can pass an instance with custom arguments.
+    :param clip:            Input clip.
+    :param radius:          Banding detection range.
+    :param thr:             Banding detection threshold(s) per plane.
+                            If you pass an int, the threshold will be applied to every plane.
+                            If you pass a tuple, different strengths will be applied per plane.
+                            If you pass two ints in a tuple, the last value will be copied to the third plane.
+    :param grains:          Specifies amount of grain to add during the final graining stage.
+                            This gets performed after `vsrgtools.limit_filter`.
+    :param lthr:            Limiting threshold. Refer to `vsrgtools.limit_filter`.
+    :param elast:           Limiting elasticity. Refer to `vsrgtools.limit_filter`.
+    :param bright_thr:      Limiting of bright areas. Refer to `vsrgtools.limit_filter`.
+    :param debander:        Debander to use. You can pass an instance with custom arguments.
+    :param prefilter:       Prefilter used to blur the clip before debanding.
+    :param debander:        Debander to use. You can pass an instance with custom arguments.
 
-    :return:            Debanded clip.
+    :return:                Debanded clip.
     """
 
     assert check_variable(clip, pfdeband)
@@ -159,6 +185,9 @@ def guided_deband(
     rad: int = 0, bin_thr: float | list[float] | None = 0, planes: PlanesT = None,
     range_in: ColorRange | None = None, **kwargs
 ) -> vs.VideoNode:
+    """
+    @@@
+    """
     assert check_variable(clip, guided_deband)
 
     planes = normalize_planes(clip, planes)

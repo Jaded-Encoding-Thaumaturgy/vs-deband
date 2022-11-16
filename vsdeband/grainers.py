@@ -20,22 +20,48 @@ __all__ = [
 
 
 class AddGrain(Grainer):
+    """Grainer class for the built-in VapourSynth graining plugin."""
+
     @inject_self.cached
     def grain(self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any) -> vs.VideoNode:
+        """
+        Add grain to a clip.
+
+        :param clip:        Input clip.
+        :param strength:    Strength of graining. Pass one float value to apply the strength to all planes.
+                            and a tuple of floats to apply different strenghts to different planes (max: 2).
+        :param kwargs:      Additional arguments to pass to the graining plugin.
+
+        :return:            Grained clip.
+        """
         luma, chroma = normalize_seq(strength, 2)
 
         return core.grain.Add(clip, luma, chroma, **(self.kwargs | kwargs))
 
 
 class AddNoise(Grainer):
+    """Grainer class for the `noise` graining plugin."""
+
     @inject_self.cached
     def grain(self, clip: vs.VideoNode, strength: float | tuple[float, float], **kwargs: Any) -> vs.VideoNode:
+        """
+        Add grain to a clip.
+
+        :param clip:        Input clip.
+        :param strength:    Strength of graining. Pass one float value to apply the strength to all planes.
+                            and a tuple of floats to apply different strenghts to different planes (max: 2).
+        :param kwargs:      Additional arguments to pass to the graining plugin.
+
+        :return:            Grained clip.
+        """
         luma, chroma = normalize_seq(strength, 2)
 
         return core.noise.Add(clip, luma, chroma, **(self.kwargs | kwargs))
 
 
 class ChickenDream(Grainer):
+    """Grainer class for the `chickendream` graining plugin."""
+
     @inject_self.cached
     def grain(
         self, clip: vs.VideoNode, strength: float | tuple[float, float] = 0.35,
@@ -44,6 +70,28 @@ class ChickenDream(Grainer):
         matrix: Matrix | int | None = None, kernel: KernelT = Catrom,
         **kwargs: Any
     ) -> vs.VideoNode:
+        """
+        Add grain to a clip.
+
+        This graining function will automatically apply an adaptive brightness mask.
+        That means grain is only applied to the darkest areas of the frame.
+
+        @@@
+
+        :param clip:            Input clip.
+        :param strength:        Strength of graining. Pass one float value to apply the strength to all planes.
+                                and a tuple of floats to apply different strenghts to different planes (max: 2).
+        :param rad:             The average grain radius in pixels. The smaller the grain, the higher the image fidelity.
+                                Must be larger than 0. Higher values will slow down the filtering significantly.
+        :param res:             The filter resolution which directly translates into the output data bitdepth.
+                                Default is 1024, which is equivalent to a 10bit output.
+                                Higher values will slow down the filtering significantly.
+        :param luma_scaling:    Luma scaling of the adaptive brightness mask.
+        @@@
+        :param kwargs:          Additional arguments to pass to the graining plugin.
+
+        :return:            Grained clip.
+        """
         assert check_variable(clip, self.__class__.grain)
 
         if not isinstance(strength, int | float):
