@@ -170,8 +170,10 @@ class F3kdb(Debander):
         step = sample_mode.step
         kwargs = dict[str, Any](
             range=radius, grainy=gry, grainc=grc, sample_mode=sample_mode,
-            seed=fallback(seed, self.seed), dynamic_grain=fallback(dynamic_grain, self.dynamic_grain),
-            dither_algo=fallback(dither_algo, self.dither_algo), blur_first=fallback(blur_first, self.blur_first)
+            seed=seed if self.seed is None else self.seed,
+            dynamic_grain=dynamic_grain if self.dynamic_grain is None else self.dynamic_grain,
+            dither_algo=dither_algo if self.dither_algo is None else self.dither_algo,
+            blur_first=blur_first if self.blur_first is None else self.blur_first
         )
 
         if self.plugin is F3kdbPlugin.NEO_NEW or all(x % sample_mode.step == 1 for x in thrs):
@@ -211,5 +213,6 @@ class F3kdb(Debander):
         gry, grc = normalize_seq(fallback(self.grains, strength), 2)
 
         return self.plugin.Deband(  # type: ignore[call-overload,no-any-return]
-            clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode
+            clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode,
+            dynamic_grain=fallback(self.dynamic_grain, static)
         )
