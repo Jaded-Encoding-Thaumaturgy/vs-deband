@@ -99,7 +99,7 @@ class F3kdb(Debander):
     """Debander wrapper around the f3kdb plugin."""
 
     radius: int | None = None
-    thr: int | tuple[int, int, int] | None = None
+    thr: int | list[int] | None = None
     grains: int | list[int] | None = None
 
     sample_mode: SampleMode | None = None
@@ -121,7 +121,7 @@ class F3kdb(Debander):
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode,
         radius: int = 16,
-        thr: int | tuple[int, int, int] = 30,
+        thr: int | list[int] = 30,
         grains: int | list[int] = 0,
         sample_mode: SampleMode = SampleMode.SQUARE,
         seed: int | None = None,
