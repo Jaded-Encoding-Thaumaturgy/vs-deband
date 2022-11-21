@@ -1,6 +1,6 @@
 """VapourSynth Debanding Functions Collection"""
 
-__version__ = '0.5.3'
+__version__ = '0.5.4'
 
 __author_name__, __author_email__ = 'Irrational Encoding Wizardry', 'wizards@encode.moe'
 __maintainer_name__, __maintainer_email__ = __author_name__, __author_email__
