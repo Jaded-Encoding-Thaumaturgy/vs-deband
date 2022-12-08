@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from typing import Any
 
-from vstools import CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, normalize_seq, split, vs
+from vstools import (
+    CustomIntEnum, KwargsT, check_variable, fallback, get_neutral_value, inject_self, join, kwargs_fallback,
+    normalize_seq, split, vs
+)
 
 from .abstract import Debander
 
@@ -124,6 +128,22 @@ class Placebo(Debander):
 
     @inject_self
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[int, int], static: bool = False, **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[int, int],
+        static: bool = False, every: int = 1, **kwargs: Any
     ) -> vs.VideoNode:
-        raise NotImplementedError
+        """
+        Add Placebo grain to a clip.
+
+        :param clip:            Source clip
+        :param strength:        Strength of the grain per plane.
+        :param static:          Graining mode. Static means no changes per frame, dynamic means changes every frame.
+
+        :return:                Grained clip
+        """
+        assert check_variable(clip, self.__class__.grain)
+
+        radius = kwargs_fallback(self.radius, (kwargs, 'radius'), 0)
+        thr = normalize_seq(kwargs_fallback(self.thr, (kwargs, 'thr'), 0))
+        grains = normalize_seq(strength)
+
+        return self.deband(clip, radius, thr, grains=grains, **kwargs)
