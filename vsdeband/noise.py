@@ -29,7 +29,7 @@ GrainerFuncGenerator = Callable[[float, float, int, bool], GrainerFunc]
 @disallow_variable_resolution
 def adaptive_grain(
     clip: vs.VideoNode, strength: float | list[float] = 0.25,
-    size: float = 1, sharp: int = 50, static: bool = False,
+    size: float = 1, sharp: int = 50, dynamic: bool | int = False,
     luma_scaling: float = 12, grainer: Grainer | type[Grainer] = AddGrain,
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | None = None, hi: int | None = None,
@@ -45,7 +45,7 @@ def adaptive_grain(
         return mask
 
     grained = sized_grain(
-        clip, strength, size, sharp, static, grainer, fade_edges,
+        clip, strength, size, sharp, dynamic, grainer, fade_edges,
         tv_range, lo, hi, protect_neutral, seed, temporal_average,
         **kwargs
     )
@@ -58,7 +58,7 @@ def adaptive_grain(
 def sized_grain(
     clip: vs.VideoNode,
     strength: float | list[float] = 0.25, size: float = 1, sharp: int = 50,
-    static: bool = False, grainer: Grainer | type[Grainer] = AddGrain,
+    dynamic: bool | int = True, grainer: Grainer | type[Grainer] = AddGrain,
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | Sequence[int] | None = None, hi: int | Sequence[int] | None = None,
     protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
@@ -99,7 +99,7 @@ def sized_grain(
         kwargs |= dict(seed=seed)
 
     if isinstance(grainer, DynamicGrainer):
-        kwargs |= dict(static=static)
+        kwargs |= dict(dynamic=dynamic)
 
     if not supports_size:
         if size != 1:
@@ -107,7 +107,7 @@ def sized_grain(
 
         sxa, sya = mod4((clip.width + sx) / 2), mod4((clip.height + sy) / 2)
 
-    length = clip.num_frames + ((temporal_radius - 1) if not static and temporal_average > 0 else 0)
+    length = clip.num_frames + ((temporal_radius - 1) if not dynamic and temporal_average > 0 else 0)
 
     blank = clip.std.BlankClip(sx, sy, None, length, color=normalize_seq(neutral, clip.format.num_planes))
 
@@ -119,7 +119,7 @@ def sized_grain(
 
         grain = scaler.scale(grain, clip.width, clip.height)
 
-    if static is False and temporal_average > 0:
+    if not dynamic and temporal_average > 0:
         average = grain.std.AverageFrames([1] * temporal_radius)
 
         cut = (temporal_radius - 1) // 2

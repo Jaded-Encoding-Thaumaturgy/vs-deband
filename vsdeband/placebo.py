@@ -129,14 +129,14 @@ class Placebo(Debander):
     @inject_self
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[int, int],
-        static: bool = False, every: int = 1, **kwargs: Any
+        dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
         """
         Add Placebo grain to a clip.
 
         :param clip:            Source clip
         :param strength:        Strength of the grain per plane.
-        :param static:          Graining mode. Static means no changes per frame, dynamic means changes every frame.
+        :param dynamic:         Graining mode. Static means no changes per frame, dynamic means changes every frame.
 
         :return:                Grained clip
         """

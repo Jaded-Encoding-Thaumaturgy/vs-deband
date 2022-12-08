@@ -31,7 +31,7 @@ class DynamicGrainer(Grainer):
     @abstractmethod
     @inject_self
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
         ...
 

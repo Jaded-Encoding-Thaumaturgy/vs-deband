@@ -194,7 +194,7 @@ class F3kdb(Debander):
 
     @inject_self
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, static: bool = False,
+        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, dynamic: bool | int = True,
         radius: int = 16, sample_mode: SampleMode = SampleMode.SQUARE
     ) -> vs.VideoNode:
         """
@@ -214,5 +214,5 @@ class F3kdb(Debander):
 
         return self.plugin.Deband(  # type: ignore[call-overload,no-any-return]
             clip, 1, 1, 1, grainy=gry, grainc=grc, range=radius, sample_mode=sample_mode,
-            dynamic_grain=fallback(self.dynamic_grain, static)
+            dynamic_grain=fallback(self.dynamic_grain, dynamic)
         )

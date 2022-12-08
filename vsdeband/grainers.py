@@ -22,21 +22,21 @@ __all__ = [
 class AddGrain(DynamicGrainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
-        return core.grain.Add(clip, luma, chroma, constant=static, **(self.kwargs | kwargs))
+        return core.grain.Add(clip, luma, chroma, constant=not dynamic, **(self.kwargs | kwargs))
 
 
 class AddNoise(DynamicGrainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], static: bool = False, **kwargs: Any
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
         luma, chroma = normalize_seq(strength, 2)
 
-        return core.noise.Add(clip, luma, chroma, constant=static, **(self.kwargs | kwargs))
+        return core.noise.Add(clip, luma, chroma, constant=not dynamic, **(self.kwargs | kwargs))
 
 
 class ChickenDream(Grainer):
