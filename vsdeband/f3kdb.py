@@ -111,7 +111,7 @@ class F3kdbPlugin(CustomIntEnum):
         if sample_mode > SampleMode.SQUARE and not self.is_neo:
             raise CustomValueError(
                 'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
-                func or self.__class__.get_step
+                func or self.__class__.get_sample_step
             )
 
         return sample_mode, sample_mode.value // 2 if self >= F3kdbPlugin.NEO_r8 else sample_mode.value
@@ -234,7 +234,7 @@ class F3kdb(Debander):
 
         radius = fallback(self.radius, radius)
 
-        sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
+        sample_mode, _ = self.plugin.get_sample_step(fallback(self.sample_mode, sample_mode), self.__class__.deband)
 
         gry, grc = normalize_seq(fallback(self.grains, strength), 2)
 
