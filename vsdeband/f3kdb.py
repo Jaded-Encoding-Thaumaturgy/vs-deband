@@ -107,14 +107,14 @@ class F3kdbPlugin(CustomIntEnum):
 
         return F3kdbPlugin.NEO
 
-    def check_sample_mode(self, sample_mode: SampleMode, func: FuncExceptT | None = None) -> SampleMode:
+    def get_sample_step(self, sample_mode: SampleMode, func: FuncExceptT | None = None) -> tuple[SampleMode, int]:
         if sample_mode > SampleMode.SQUARE and not self.is_neo:
             raise CustomValueError(
                 'Normal fk3db doesn\'t support SampleMode.ROW or SampleMode.COL_ROW_MEAN',
-                func or self.__class__.check_sample_mode
+                func or self.__class__.get_step
             )
 
-        return sample_mode
+        return sample_mode, sample_mode.value // 2 if self >= F3kdbPlugin.NEO_r8 else sample_mode.value
 
 
 @dataclass
@@ -186,14 +186,13 @@ class F3kdb(Debander):
 
         radius = fallback(self.radius, radius)
 
-        sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
+        sample_mode, step = self.plugin.get_sample_step(fallback(self.sample_mode, sample_mode), self.__class__.deband)
 
         thrs = cast(
             tuple[int, int, int], tuple(clamp_arr(normalize_seq(thr), 1, self.plugin.thr_peak(self.full_scale)))
         )
         gry, grc = normalize_seq(fallback(self.grains, grains), 2)
 
-        step = sample_mode.step
         kwargs = dict[str, Any](
             range=radius, grainy=gry, grainc=grc, sample_mode=sample_mode,
             seed=seed if self.seed is None else self.seed,
@@ -203,7 +202,7 @@ class F3kdb(Debander):
             full_scale=self.full_scale
         )
 
-        if self.plugin >= F3kdbPlugin.NEO_r8 or all(x % sample_mode.step == 1 for x in thrs):
+        if self.plugin >= F3kdbPlugin.NEO_r9 or all(x % step == 1 for x in thrs):
             return self.plugin.Deband(clip, *thrs, **kwargs)
 
         lows = cast(tuple[int, int, int], tuple(((th - 1) // step * step + 1 for th in thrs)))
