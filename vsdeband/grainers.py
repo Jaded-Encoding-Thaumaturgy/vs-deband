@@ -20,6 +20,8 @@ __all__ = [
 
 
 class AddGrain(Grainer):
+    config = Grainer.SupportsConfig(True, True, False)
+
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
@@ -30,6 +32,8 @@ class AddGrain(Grainer):
 
 
 class AddNoise(Grainer):
+    config = Grainer.SupportsConfig(True, True, True)
+
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
@@ -40,6 +44,8 @@ class AddNoise(Grainer):
 
 
 class ChickenDream(Grainer):
+    config = Grainer.SupportsConfig(False, True, False)
+
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float] = 0.35,

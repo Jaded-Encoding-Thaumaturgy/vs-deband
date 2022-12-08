@@ -139,6 +139,7 @@ class F3kdb(Debander):
     def __post_init__(self) -> None:
         super().__post_init__()
 
+        self.config = Debander.SupportsConfig(True, True, False)
         self.plugin = F3kdbPlugin.from_param(self.use_neo)
 
     @inject_self

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import ceil
 from typing import Any
 
 from vstools import (
-    CustomIntEnum, KwargsT, check_variable, fallback, get_neutral_value, inject_self, join, kwargs_fallback,
-    normalize_seq, split, vs
+    CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, kwargs_fallback, normalize_seq, split, vs
 )
 
 from .abstract import Debander
@@ -75,6 +73,11 @@ class Placebo(Debander):
     iterations: int | None = None
 
     dither: PlaceboDither | None = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        self.config = Debander.SupportsConfig(False, True, False)
 
     @inject_self
     def deband(  # type: ignore[override]
