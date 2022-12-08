@@ -146,4 +146,7 @@ class Placebo(Debander):
         thr = normalize_seq(kwargs_fallback(self.thr, (kwargs, 'thr'), 0))
         grains = normalize_seq(strength)
 
+        if not dynamic:
+            raise NotImplementedError
+
         return self.deband(clip, radius, thr, grains=grains, **kwargs)
