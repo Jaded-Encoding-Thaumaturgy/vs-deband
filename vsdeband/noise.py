@@ -11,7 +11,7 @@ from vstools import (
 )
 
 from .mask import adg_mask
-from .abstract import Grainer, Debander, DynamicGrainer
+from .abstract import Grainer, Debander
 from .grainers import AddGrain, AddNoise
 
 __all__ = [
@@ -90,16 +90,13 @@ def sized_grain(
 
     supports_size = sharp == 50 and isinstance(grainer, AddNoise)
 
-    kwargs |= dict(strength=strength)
+    kwargs |= dict(strength=strength, dynamic=dynamic)
 
     if supports_size:
         kwargs |= dict(xsize=size, ysize=size)
 
     if not isinstance(grainer, Debander):
         kwargs |= dict(seed=seed)
-
-    if isinstance(grainer, DynamicGrainer):
-        kwargs |= dict(dynamic=dynamic)
 
     if not supports_size:
         if size != 1:

@@ -9,7 +9,7 @@ from vstools import (
     plane, vs, inject_self, get_video_format
 )
 
-from .abstract import Grainer, DynamicGrainer
+from .abstract import Grainer
 from .mask import adg_mask
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class AddGrain(DynamicGrainer):
+class AddGrain(Grainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
@@ -29,7 +29,7 @@ class AddGrain(DynamicGrainer):
         return core.grain.Add(clip, luma, chroma, constant=not dynamic, **(self.kwargs | kwargs))
 
 
-class AddNoise(DynamicGrainer):
+class AddNoise(Grainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
@@ -43,12 +43,15 @@ class ChickenDream(Grainer):
     @inject_self.cached
     def grain(  # type: ignore[override]
         self, clip: vs.VideoNode, strength: float | tuple[float, float] = 0.35,
-        rad: float = 0.025, res: int = 1024, luma_scaling: float = 10,
-        seed: int = 42069, draft: bool = True, coarsharp: bool | float = 1.0,
-        matrix: Matrix | int | None = None, kernel: KernelT = Catrom,
-        **kwargs: Any
+        dynamic: bool | int = True, rad: float = 0.025, res: int = 1024,
+        luma_scaling: float = 10, seed: int = 42069, draft: bool = True,
+        coarsharp: bool | float = 1.0, matrix: Matrix | int | None = None,
+        kernel: KernelT = Catrom, **kwargs: Any
     ) -> vs.VideoNode:
         assert check_variable(clip, self.__class__.grain)
+
+        if not dynamic:
+            raise NotImplementedError
 
         if not isinstance(strength, int | float):
             if clip.format.num_planes > 1:
