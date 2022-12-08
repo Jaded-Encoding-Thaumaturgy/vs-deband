@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from math import ceil
 from typing import Any
 
-from vstools import (CustomIntEnum, KwargsT, check_variable, fallback, get_neutral_value, inject_self, join,
-                     normalize_seq, split, vs)
+from vstools import (
+    CustomIntEnum, KwargsT, check_variable, fallback, get_neutral_value, inject_self, join, kwargs_fallback,
+    normalize_seq, split, vs
+)
 
 from .abstract import Debander
 
@@ -135,27 +137,13 @@ class Placebo(Debander):
         :param clip:            Source clip
         :param strength:        Strength of the grain per plane.
         :param static:          Graining mode. Static means no changes per frame, dynamic means changes every frame.
-        :param every:           Change the pattern every n frames. `static` *must* be False!
 
         :return:                Grained clip
         """
-        placebo_kwargs: dict[str, Any] = {"radius": 0, "iterations": 1, "thr": 0, "grains": strength}
-        placebo_kwargs |= kwargs
+        assert check_variable(clip, self.__class__.grain)
 
-        if not static and every <= 1:
-            return self.deband(clip, **placebo_kwargs)
+        radius = kwargs_fallback(self.radius, (kwargs, 'radius'), 0)
+        thr = normalize_seq(kwargs_fallback(self.thr, (kwargs, 'thr'), 0))
+        grains = normalize_seq(strength)
 
-        neutral_clip = clip.std.BlankClip(
-            length=ceil((clip.num_frames + every * 2) / every), keep=True, color=normalize_seq(
-                [get_neutral_value(clip), get_neutral_value(clip, True)], clip.format.num_planes
-            ), fpsnum=int(clip.fps.numerator / every), fpsden=clip.fps.denominator
-        )
-
-        grained_diff = self.deband(neutral_clip, **placebo_kwargs)
-
-        if static:
-            grained_diff = grained_diff[0] * (clip.num_frames - 1)
-        else:
-            grained_diff = grained_diff.std.DuplicateFrames(list(range(grained_diff.num_frames)) * (every - 1))
-
-        return clip.std.MergeDiff(grained_diff)
+        return self.deband(clip, radius, thr, grains=grains, **kwargs)
