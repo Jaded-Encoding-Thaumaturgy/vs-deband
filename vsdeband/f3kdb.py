@@ -38,11 +38,10 @@ class F3kdbPlugin(CustomIntEnum):
     def is_neo(self) -> bool:
         return self is not F3kdbPlugin.OLD
 
-    @property
-    def thr_peak(self) -> int:
+    def thr_peak(self, full_scale: bool = False) -> int:
         bits = 8
 
-        if self is F3kdbPlugin.NEO_r9:
+        if full_scale or self is F3kdbPlugin.NEO_r9:
             bits += 8
         elif self is F3kdbPlugin.NEO_r8:
             bits += 4
@@ -62,7 +61,8 @@ class F3kdbPlugin(CustomIntEnum):
         dynamic_grain: int | None = None, dither_algo: int | None = None,
         preset: DataType | None = None, blur_first: int | None = None,
         random_algo_ref: int | None = None, random_algo_grain: int | None = None,
-        random_param_ref: float | None = None, random_param_grain: float | None = None
+        random_param_ref: float | None = None, random_param_grain: float | None = None,
+        full_scale: bool = False
     ) -> vs.VideoNode:
         kwargs = dict(
             range=range, grainy=grainy, grainc=grainc, sample_mode=sample_mode, seed=seed,
@@ -72,12 +72,16 @@ class F3kdbPlugin(CustomIntEnum):
             dither_algo=dither_algo
         )
 
-        if self is F3kdbPlugin.NEO_r9:
-            y, cb, cr = max(1, y << 7), max(1, cb << 7), max(1, cr << 7)
-        elif self is F3kdbPlugin.NEO_r8:
-            y, cb, cr = max(1, y >> 3), max(1, cb >> 3), max(1, cr >> 3)
-
-        print(y, cb, cr, self.thr_peak)
+        if full_scale:
+            if self is F3kdbPlugin.NEO_r8:
+                y, cb, cr = max(1, y >> 4), max(1, cb >> 4), max(1, cr >> 4)
+            elif self <= F3kdbPlugin.NEO:
+                y, cb, cr = max(1, y >> 7), max(1, cb >> 7), max(1, cr >> 7)
+        else:
+            if self is F3kdbPlugin.NEO_r9:
+                y, cb, cr = max(1, y << 7), max(1, cb << 7), max(1, cr << 7)
+            elif self is F3kdbPlugin.NEO_r8:
+                y, cb, cr = max(1, y >> 3), max(1, cb >> 3), max(1, cr >> 3)
 
         if self >= F3kdbPlugin.NEO_r8:
             kwargs |= dict(y2=y, cb2=cb, cr2=cr)
@@ -130,6 +134,7 @@ class F3kdb(Debander):
     blur_first: bool | None = None
 
     use_neo: bool | None = field(default=None, kw_only=True)
+    full_scale: bool = field(default=False, kw_only=True)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -183,7 +188,9 @@ class F3kdb(Debander):
 
         sample_mode = self.plugin.check_sample_mode(fallback(self.sample_mode, sample_mode), self.__class__.deband)
 
-        thrs = cast(tuple[int, int, int], tuple(clamp_arr(normalize_seq(thr), 1, self.plugin.thr_peak)))
+        thrs = cast(
+            tuple[int, int, int], tuple(clamp_arr(normalize_seq(thr), 1, self.plugin.thr_peak(self.full_scale)))
+        )
         gry, grc = normalize_seq(fallback(self.grains, grains), 2)
 
         step = sample_mode.step
@@ -192,7 +199,8 @@ class F3kdb(Debander):
             seed=seed if self.seed is None else self.seed,
             dynamic_grain=dynamic_grain if self.dynamic_grain is None else self.dynamic_grain,
             dither_algo=dither_algo if self.dither_algo is None else self.dither_algo,
-            blur_first=blur_first if self.blur_first is None else self.blur_first
+            blur_first=blur_first if self.blur_first is None else self.blur_first,
+            full_scale=self.full_scale
         )
 
         if self.plugin >= F3kdbPlugin.NEO_r8 or all(x % sample_mode.step == 1 for x in thrs):
