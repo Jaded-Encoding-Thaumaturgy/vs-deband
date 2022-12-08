@@ -31,7 +31,8 @@ class SampleMode(CustomIntEnum):
 class F3kdbPlugin(CustomIntEnum):
     OLD = 0
     NEO = 1
-    NEO_NEW = 2
+    NEO_r8 = 2
+    NEO_r9 = 3
 
     @property
     def is_neo(self) -> bool:
@@ -39,7 +40,14 @@ class F3kdbPlugin(CustomIntEnum):
 
     @property
     def thr_peak(self) -> int:
-        return 511 >> (3 if self is F3kdbPlugin.NEO_NEW else 0)
+        bits = 8
+
+        if self is F3kdbPlugin.NEO_r9:
+            bits += 8
+        elif self is F3kdbPlugin.NEO_r8:
+            bits += 4
+
+        return (1 << bits) - 1
 
     @property
     def namespace(self) -> vs.Plugin:
@@ -64,8 +72,15 @@ class F3kdbPlugin(CustomIntEnum):
             dither_algo=dither_algo
         )
 
-        if self is F3kdbPlugin.NEO_NEW:
-            kwargs |= dict(y2=max(1, y >> 3), cb2=max(1, cb >> 3), cr2=max(1, cr >> 3))
+        if self is F3kdbPlugin.NEO_r9:
+            y, cb, cr = max(1, y << 7), max(1, cb << 7), max(1, cr << 7)
+        elif self is F3kdbPlugin.NEO_r8:
+            y, cb, cr = max(1, y >> 3), max(1, cb >> 3), max(1, cr >> 3)
+
+        print(y, cb, cr, self.thr_peak)
+
+        if self >= F3kdbPlugin.NEO_r8:
+            kwargs |= dict(y2=y, cb2=cb, cr2=cr)
         else:
             kwargs |= dict(y=y, cb=cb, cr=cr)
 
@@ -80,7 +95,11 @@ class F3kdbPlugin(CustomIntEnum):
             return F3kdbPlugin.OLD
 
         if 'y2' in core.neo_f3kdb.Deband.__signature__.parameters:  # type: ignore[attr-defined]
-            return F3kdbPlugin.NEO_NEW
+            try:
+                core.std.BlankClip(format=vs.YUV420P8).neo_f3kdb.Deband(y2=512)
+                return F3kdbPlugin.NEO_r9
+            except vs.Error:
+                return F3kdbPlugin.NEO_r8
 
         return F3kdbPlugin.NEO
 
@@ -176,7 +195,7 @@ class F3kdb(Debander):
             blur_first=blur_first if self.blur_first is None else self.blur_first
         )
 
-        if self.plugin is F3kdbPlugin.NEO_NEW or all(x % sample_mode.step == 1 for x in thrs):
+        if self.plugin >= F3kdbPlugin.NEO_r8 or all(x % sample_mode.step == 1 for x in thrs):
             return self.plugin.Deband(clip, *thrs, **kwargs)
 
         lows = cast(tuple[int, int, int], tuple(((th - 1) // step * step + 1 for th in thrs)))
