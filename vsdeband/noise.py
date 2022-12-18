@@ -116,7 +116,7 @@ def sized_grain(
 
         grain = scaler.scale(grain, clip.width, clip.height)
 
-    if not dynamic and temporal_average > 0:
+    if dynamic and temporal_average > 0:
         average = grain.std.AverageFrames([1] * temporal_radius)
 
         cut = (temporal_radius - 1) // 2
