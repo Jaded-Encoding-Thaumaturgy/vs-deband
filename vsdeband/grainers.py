@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from vskernels import Catrom, Kernel, KernelT
+from vsmasktools import adg_mask
 from vsscale import gamma2linear, linear2gamma
 from vstools import (
-    CustomOverflowError, DitherType, Matrix, Transfer, check_variable, core, depth, expect_bits, join, normalize_seq,
-    plane, vs, inject_self, get_video_format
+    CustomOverflowError, DitherType, Matrix, Transfer, check_variable, core, depth, expect_bits, get_video_format,
+    inject_self, join, normalize_seq, plane, vs
 )
 
 from .abstract import Grainer
-from .mask import adg_mask
 
 __all__ = [
     'AddGrain',

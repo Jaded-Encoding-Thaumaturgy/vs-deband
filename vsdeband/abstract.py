@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
-from dataclasses import dataclass
 from vstools import inject_self, vs
 
 __all__ = [
@@ -35,6 +35,7 @@ class Grainer(ABC):
     ) -> vs.VideoNode:
         raise NotImplementedError
 
+    @abstractmethod
     @inject_self.cached
     def grain(
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any

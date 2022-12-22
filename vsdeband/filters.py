@@ -7,8 +7,8 @@ from vsexprtools import aka_expr_available, norm_expr, norm_expr_planes
 from vskernels import Bilinear, Point, Scaler, ScalerT
 from vsrgtools import box_blur, gauss_blur
 from vstools import (
-    ColorRange, ColorRangeT, PlanesT, check_ref_clip, check_variable, cround, depth, expect_bits, normalize_planes,
-    normalize_seq, vs, get_plane_sizes, get_prop
+    ColorRange, ColorRangeT, PlanesT, check_ref_clip, check_variable, cround, depth, expect_bits, get_plane_sizes,
+    get_prop, normalize_planes, normalize_seq, vs
 )
 
 from .types import GuidedFilterMode

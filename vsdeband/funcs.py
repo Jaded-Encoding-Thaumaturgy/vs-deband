@@ -4,10 +4,10 @@ from functools import partial
 from math import ceil
 from typing import Any
 
-from vsexprtools import norm_expr
-from vskernels import Scaler, ScalerT, Spline64
 from vsdenoise import Prefilter
-from vsmask.util import expand, inpand
+from vsexprtools import ExprOp
+from vskernels import Scaler, ScalerT, Spline64
+from vsmasktools import Morpho
 from vsrgtools import RemoveGrainMode, RemoveGrainModeT, limit_filter, removegrain
 from vstools import (
     ColorRange, PlanesT, VSFunction, check_variable, depth, expect_bits, fallback, normalize_planes, normalize_seq,
@@ -181,7 +181,8 @@ def guided_deband(
         deband = limit_filter(deband, clip, thr=tuple(map(int, to_arr(thr))))  # type: ignore
 
     if rad:
-        rmask = norm_expr([expand(clip, rad), inpand(clip, rad)], 'x y -', planes)
+        morpho = Morpho(planes)
+        rmask = ExprOp.SUB.combine(morpho.expand(clip, rad), morpho.inpand(clip, rad), planes=planes)
 
         if bin_thr and max(bin_thr) > 0:
             rmask = rmask.std.Binarize(threshold=bin_thr, planes=planes)
