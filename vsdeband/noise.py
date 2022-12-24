@@ -9,8 +9,8 @@ from vstools import (
     depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
     get_peak_value, mod4, normalize_seq, scale_value, split, vs
 )
+from vsmasktools import adg_mask
 
-from .mask import adg_mask
 from .abstract import Grainer, Debander
 from .grainers import AddGrain, AddNoise
 
