@@ -4,7 +4,7 @@ import warnings
 from typing import Any, Callable, Sequence
 
 from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
-from vskernels import BicubicAuto
+from vskernels import Bicubic, BicubicAuto, Kernel, Sinc
 from vstools import (
     depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
     get_peak_value, mod4, normalize_seq, scale_value, split, vs
@@ -31,10 +31,11 @@ def adaptive_grain(
     clip: vs.VideoNode, strength: float | list[float] = 0.25,
     size: float = 1, sharp: int = 50, dynamic: bool | int = False,
     luma_scaling: float = 12, grainer: Grainer | type[Grainer] = AddGrain,
-    fade_edges: bool = True, tv_range: bool = True,
+    fade_edges: bool = True, tv_range: bool = True, kernel: Kernel = Sinc,
     lo: int | None = None, hi: int | None = None,
     protect_neutral: bool = True, seed: int = -1,
-    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3),
+    **kwargs: Any
 ) -> vs.VideoNode:
     mask = adg_mask(clip, luma_scaling)
 
@@ -46,7 +47,7 @@ def adaptive_grain(
 
     grained = sized_grain(
         clip, strength, size, sharp, dynamic, grainer, fade_edges,
-        tv_range, lo, hi, protect_neutral, seed, temporal_average,
+        tv_range, kernel, lo, hi, protect_neutral, seed, temporal_average,
         **kwargs
     )
 
@@ -59,9 +60,10 @@ def sized_grain(
     clip: vs.VideoNode,
     strength: float | list[float] = 0.25, size: float = 1, sharp: int = 50,
     dynamic: bool | int = True, grainer: Grainer | type[Grainer] = AddGrain,
-    fade_edges: bool = True, tv_range: bool = True,
+    fade_edges: bool = True, tv_range: bool = True, kernel: Kernel = Sinc,
     lo: int | Sequence[int] | None = None, hi: int | Sequence[int] | None = None,
-    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3),
+    **kwargs: Any
 ) -> vs.VideoNode:
     assert clip.format
 
@@ -78,7 +80,7 @@ def sized_grain(
 
     neutral = [get_neutral_value(clip), get_neutral_value(clip, True)]
 
-    scaler = BicubicAuto(sharp / -50 + 1)
+    scaler = BicubicAuto(sharp / -50 + 1) if isinstance(kernel, Bicubic) else kernel
 
     if not isinstance(strength, list):
         strength = [strength, strength / 2]
@@ -150,7 +152,7 @@ def sized_grain(
         )
 
         if protect_neutral and strength[1] > 0 and clip.format.color_family == vs.YUV:
-            neutral_mask = clip.resize.Bicubic(format=clip.format.replace(subsampling_h=0, subsampling_w=0).id)
+            neutral_mask = kernel.resample(clip, format=clip.format.replace(subsampling_h=0, subsampling_w=0).id)
 
             # disable grain if neutral chroma
             neutral_mask = expr_func(
