@@ -34,8 +34,51 @@ def adaptive_grain(
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | None = None, hi: int | None = None,
     protect_neutral: bool = True, seed: int = -1,
-    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3),
+    **kwargs: Any
 ) -> vs.VideoNode:
+    """
+    Adaptive graining using a luminance mask.
+
+    Based on kageru's `adaptive_grain`. For more information, check out his
+    `blog post <https://blog.kageru.moe/legacy/adaptivegrain.html>`_ on the subject.
+
+    This function greatly expands the scope of the old `adaptive_grain`,
+    adding a lot of useful functionality to further adjust the grain added to the clip.
+
+    :param clip:                Clip to process.
+    :param strength:            Graining strength. Added grain is relative to the `grainer` passed.
+                                Accepts a list of floats or a single float. The strength is applied
+                                to each plane separately. If one float is passed, the same strength
+                                is applied to every plane.
+                                Default: 0.25.
+    :param size:                Relative size of the grain. This parameter allows you to tune the size
+                                of the grain. Lower-than-1 values will create smaller, finer pieces of grain,
+                                whereas higher-than-1 will increase the size.
+                                For more information, see :py:func:`sized_grain`. Default: 1.0.
+    :param sharp:               Sharpness of the grain resizing. This affects the `Bicubic` "c" value.
+                                Higher values will be sharper, but may allow create more ringing and streaking.
+                                Default: 50.
+    :param dynamic:             Whether to make the grain dynamic. False makes the grain static. Default: False.
+    :param luma_scaling:        Luma scale adjusting. Lower values will catch more darker areas, and vice versa.
+                                Recommended values are between 4 minimum and 16 maximum. Default: 12.
+    :param grainer:             The graining method to use. Must be a graining class inheriting :py:class:`Grainer`.
+                                Default: AddGrain.
+    :param fade_edges:          @PLACEHOLDER@
+    :param tv_range:            Whether to treat the clip as `TV Range` for internal value scaling.
+                                Default: True.
+    :param lo:                  @PLACEHOLDER@
+    :param hi:                  @PLACEHOLDER@
+    :param protect_netural:     @PLACEHOLDER@
+    :param seed:                Seed for the grain pattern. Set this to make the grain deterministic.
+                                Default: -1 (random).
+    :param show_mask:           Return the luminosity mask. Default: False.
+    :param temporal_average:    Temporal averaging of grain. Higher values will make the grain pattern
+                                smoother across multiple frames. Default: (0, 3)
+                                @PLACEHOLDER@ # ^ Was this not how it always worked? Or did you change it?
+
+    :return:                    Either a grained clip or a luminosity mask.
+    """
     mask = adg_mask(clip, luma_scaling)
 
     vdepth = get_depth(clip)
@@ -61,8 +104,16 @@ def sized_grain(
     static: bool = False, grainer: Grainer | type[Grainer] = AddGrain,
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | Sequence[int] | None = None, hi: int | Sequence[int] | None = None,
-    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3),
+    **kwargs: Any
 ) -> vs.VideoNode:
+    """
+    Adjust the size of the grains when graining a clip.
+
+    For more information, please refer to :py:func:`adaptive_grain`'s docstring.
+
+    :return:        Grained clip with the grain adjusted.
+    """
     assert clip.format
 
     sx, sy = clip.width, clip.height
