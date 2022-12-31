@@ -24,10 +24,10 @@ def deband_detail_mask(
     blur_ret = gauss_blur(ret, sigma)
     blur_ret_diff = combine([blur_ret, ret], ExprOp.SUB).std.Deflate()
     blur_ret_brz = iterate(blur_ret_diff, core.std.Inflate, 4)
-    blur_ret_brz = Morpho.closing(blur_ret_brz.std.Binarize(brz[0]), coordinates=8)
+    blur_ret_brz = Morpho.closing(blur_ret_brz.std.Binarize(brz[0]), coords=8)
 
     prewitt_mask = clip_y.std.Prewitt().std.Binarize(brz[1]).std.Deflate().std.Inflate()
-    prewitt_brz = Morpho.closing(prewitt_mask.std.Binarize(brz[1]), coordinates=4)
+    prewitt_brz = Morpho.closing(prewitt_mask.std.Binarize(brz[1]), coords=4)
 
     merged = combine([blur_ret_brz, prewitt_brz], ExprOp.ADD)
     rm_grain = removegrain(merged, rg_mode)
