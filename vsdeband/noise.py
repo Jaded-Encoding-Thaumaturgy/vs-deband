@@ -4,7 +4,7 @@ import warnings
 from typing import Any, Callable, Sequence
 
 from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
-from vskernels import BicubicAuto
+from vskernels import BicubicAuto, ScalerT
 from vsmasktools import adg_mask
 from vstools import (
     CustomIndexError, depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
@@ -34,7 +34,8 @@ def adaptive_grain(
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | None = None, hi: int | None = None,
     protect_neutral: bool = True, seed: int = -1,
-    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3),
+    kernel: ScalerT = BicubicAuto, **kwargs: Any
 ) -> vs.VideoNode:
     mask = adg_mask(clip, luma_scaling)
 
@@ -47,7 +48,7 @@ def adaptive_grain(
     grained = sized_grain(
         clip, strength, size, sharp, dynamic, grainer, fade_edges,
         tv_range, lo, hi, protect_neutral, seed, temporal_average,
-        **kwargs
+        kernel, **kwargs
     )
 
     return clip.std.MaskedMerge(grained, mask)
@@ -61,7 +62,8 @@ def sized_grain(
     dynamic: bool | int = True, grainer: Grainer | type[Grainer] = AddGrain,
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | Sequence[int] | None = None, hi: int | Sequence[int] | None = None,
-    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3),
+    kernel: ScalerT = BicubicAuto, **kwargs: Any
 ) -> vs.VideoNode:
     assert clip.format
 
@@ -86,7 +88,7 @@ def sized_grain(
 
     neutral = [get_neutral_value(clip), get_neutral_value(clip, True)]
 
-    scaler = BicubicAuto(sharp / -50 + 1)
+    scaler = kernel(sharp / -50 + 1)
 
     if not isinstance(strength, list):
         strength = [strength, strength / 2]
