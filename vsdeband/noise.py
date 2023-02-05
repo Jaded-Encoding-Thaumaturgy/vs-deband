@@ -7,8 +7,8 @@ from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
 from vskernels import BicubicAuto, Lanczos, ScalerT
 from vsmasktools import adg_mask
 from vstools import (
-    CustomIndexError, FuncExceptT, copy_signature, get_depth, get_neutral_value, get_peak_value, mod4, normalize_seq,
-    scale_value, split, vs
+    FuncExceptT, copy_signature, get_depth, get_neutral_value, get_peak_value, mod4, normalize_seq, scale_value, split,
+    vs
 )
 
 from .abstract import Debander, Grainer
@@ -33,7 +33,7 @@ class _sized_grain:
         fade_edges: bool = True, tv_range: bool = True,
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
-        temporal_average: int | tuple[int, int] = (0, 3),
+        temporal_average: int | tuple[int, int] = (0, 1),
         scaler: ScalerT | None = None, func: FuncExceptT | None = None, **kwargs: Any
     ) -> vs.VideoNode:
         assert clip.format
@@ -50,15 +50,10 @@ class _sized_grain:
         if isinstance(temporal_average, tuple):
             temporal_average, temporal_radius = temporal_average
         else:
-            temporal_average, temporal_radius = temporal_average, 3
+            temporal_average, temporal_radius = temporal_average, 1
 
-        # TODO make temporal_radius behave like other filters (like nl, mvtools)
-
-        if temporal_radius <= 1:
-            raise CustomIndexError('temporal_radius must be >= 3!')
-
-        if temporal_radius % 2 == 0:
-            raise CustomIndexError('temporal_radius must be odd!')
+        do_taverage = dynamic and temporal_average > 0 and temporal_radius > 0
+        temporal_window = temporal_radius * 2 + 1
 
         def scale_val8x(value: int, chroma: bool = False) -> float:
             return scale_value(value, 8, vdepth, scale_offsets=not tv_range, chroma=chroma)
@@ -85,7 +80,7 @@ class _sized_grain:
 
         sxa, sya = mod4((clip.width + sx) / 2), mod4((clip.height + sy) / 2)
 
-        length = clip.num_frames + ((temporal_radius - 1) if not dynamic and temporal_average > 0 else 0)
+        length = clip.num_frames + (temporal_window - 1 if do_taverage else 0)
 
         blank = clip.std.BlankClip(sx, sy, None, length, color=normalize_seq(neutral, clip.format.num_planes))
 
@@ -97,11 +92,9 @@ class _sized_grain:
 
             grain = scaler.scale(grain, clip.width, clip.height)
 
-        if dynamic and temporal_average > 0:
-            average = grain.std.AverageFrames([1] * temporal_radius)
-
-            cut = (temporal_radius - 1) // 2
-            grain = grain.std.Merge(average, temporal_average / 100)[cut:-cut]
+        if do_taverage:
+            average = grain.std.AverageFrames([1] * temporal_window)
+            grain = grain.std.Merge(average, temporal_average / 100)[temporal_radius:-temporal_radius]
 
         if fade_edges:
             if lo is None:
@@ -154,7 +147,7 @@ class _sized_grain:
         fade_edges: bool = True, tv_range: bool = True,
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
-        temporal_average: int | tuple[int, int] = (0, 3),
+        temporal_average: int | tuple[int, int] = (0, 1),
         scaler: ScalerT | None = None, func: FuncExceptT | None = None, **kwargs: Any
     ) -> vs.VideoNode:
         grained = sized_grain(
