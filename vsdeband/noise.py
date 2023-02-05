@@ -34,6 +34,7 @@ class _sized_grain:
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
         temporal_average: int | tuple[int, int] = (0, 1),
+        postprocess: Callable[[vs.VideoNode], vs.VideoNode] | None = None,
         scaler: ScalerT | None = None, func: FuncExceptT | None = None, **kwargs: Any
     ) -> vs.VideoNode:
         assert clip.format
@@ -92,6 +93,9 @@ class _sized_grain:
 
             grain = scaler.scale(grain, clip.width, clip.height)
 
+        if postprocess:
+            grain = postprocess(grain)
+
         if do_taverage:
             average = grain.std.AverageFrames([1] * temporal_window)
             grain = grain.std.Merge(average, temporal_average / 100)[temporal_radius:-temporal_radius]
@@ -148,11 +152,13 @@ class _sized_grain:
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
         temporal_average: int | tuple[int, int] = (0, 1),
+        postprocess: Callable[[vs.VideoNode], vs.VideoNode] | None = None,
         scaler: ScalerT | None = None, func: FuncExceptT | None = None, **kwargs: Any
     ) -> vs.VideoNode:
         grained = sized_grain(
             clip, strength, size, dynamic, grainer, fade_edges, tv_range,
-            lo, hi, protect_neutral, seed, temporal_average, scaler, func or self.adaptive, **kwargs
+            lo, hi, protect_neutral, seed, temporal_average, postprocess,
+            scaler, func or self.adaptive, **kwargs
         )
 
         return clip.std.MaskedMerge(grained, adg_mask(clip, luma_scaling))
