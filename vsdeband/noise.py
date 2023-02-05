@@ -12,7 +12,7 @@ from vstools import (
 )
 
 from .abstract import Debander, Grainer
-from .grainers import AddGrain
+from .grainers import AddNoise
 
 __all__ = [
     'adaptive_grain',
@@ -29,7 +29,7 @@ class _sized_grain:
     def __call__(
         self, clip: vs.VideoNode, strength: float | list[float] = 0.25,
         size: float = 1, dynamic: bool | int = False,
-        grainer: Grainer | type[Grainer] = AddGrain,
+        grainer: Grainer | type[Grainer] = AddNoise,
         fade_edges: bool = True, tv_range: bool = True,
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
@@ -147,7 +147,7 @@ class _sized_grain:
     def adaptive(
         self, clip: vs.VideoNode, strength: float | list[float] = 0.25,
         size: float = 1, dynamic: bool | int = False,
-        luma_scaling: float = 12, grainer: Grainer | type[Grainer] = AddGrain,
+        luma_scaling: float = 12, grainer: Grainer | type[Grainer] = AddNoise,
         fade_edges: bool = True, tv_range: bool = True,
         lo: int | None = None, hi: int | None = None,
         protect_neutral: bool = True, seed: int = -1,
