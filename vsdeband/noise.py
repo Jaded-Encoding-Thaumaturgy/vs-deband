@@ -5,13 +5,13 @@ from typing import Any, Callable, Sequence
 
 from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
 from vskernels import BicubicAuto
+from vsmasktools import adg_mask
 from vstools import (
-    depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
+    CustomIndexError, depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
     get_peak_value, mod4, normalize_seq, scale_value, split, vs
 )
-from vsmasktools import adg_mask
 
-from .abstract import Grainer, Debander
+from .abstract import Debander, Grainer
 from .grainers import AddGrain, AddNoise
 
 __all__ = [
@@ -72,6 +72,14 @@ def sized_grain(
         temporal_average, temporal_radius = temporal_average
     else:
         temporal_average, temporal_radius = temporal_average, 3
+
+    # TODO make temporal_radius behave like other filters (like nl, mvtools)
+
+    if temporal_radius <= 1:
+        raise CustomIndexError('temporal_radius must be >= 3!')
+
+    if temporal_radius % 2 == 0:
+        raise CustomIndexError('temporal_radius must be odd!')
 
     def scale_val8x(value: int, chroma: bool = False) -> float:
         return scale_value(value, 8, vdepth, scale_offsets=not tv_range, chroma=chroma)
