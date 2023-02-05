@@ -4,11 +4,11 @@ import warnings
 from typing import Any, Callable, Sequence
 
 from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
-from vskernels import BicubicAuto
+from vskernels import BicubicAuto, ScalerT
 from vsmasktools import adg_mask
 from vstools import (
-    CustomIndexError, depth, disallow_variable_format, disallow_variable_resolution, get_depth, get_neutral_value,
-    get_peak_value, mod4, normalize_seq, scale_value, split, vs
+    CustomIndexError, FuncExceptT, depth, disallow_variable_format, disallow_variable_resolution, get_depth,
+    get_neutral_value, get_peak_value, mod4, normalize_seq, scale_value, split, vs
 )
 
 from .abstract import Debander, Grainer
@@ -34,7 +34,8 @@ def adaptive_grain(
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | None = None, hi: int | None = None,
     protect_neutral: bool = True, seed: int = -1,
-    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    show_mask: bool = False, temporal_average: int | tuple[int, int] = (0, 3),
+    scaler: ScalerT | None = None, **kwargs: Any
 ) -> vs.VideoNode:
     mask = adg_mask(clip, luma_scaling)
 
@@ -47,7 +48,7 @@ def adaptive_grain(
     grained = sized_grain(
         clip, strength, size, sharp, dynamic, grainer, fade_edges,
         tv_range, lo, hi, protect_neutral, seed, temporal_average,
-        **kwargs
+        scaler, adaptive_grain, **kwargs
     )
 
     return clip.std.MaskedMerge(grained, mask)
@@ -61,7 +62,8 @@ def sized_grain(
     dynamic: bool | int = True, grainer: Grainer | type[Grainer] = AddGrain,
     fade_edges: bool = True, tv_range: bool = True,
     lo: int | Sequence[int] | None = None, hi: int | Sequence[int] | None = None,
-    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3), **kwargs: Any
+    protect_neutral: bool = True, seed: int = -1, temporal_average: int | tuple[int, int] = (0, 3),
+    scaler: ScalerT | None = None, func: FuncExceptT | None = None, **kwargs: Any
 ) -> vs.VideoNode:
     assert clip.format
 
@@ -76,17 +78,19 @@ def sized_grain(
     # TODO make temporal_radius behave like other filters (like nl, mvtools)
 
     if temporal_radius <= 1:
-        raise CustomIndexError('temporal_radius must be >= 3!')
+        raise CustomIndexError('temporal_radius must be >= 3!', func)
 
     if temporal_radius % 2 == 0:
-        raise CustomIndexError('temporal_radius must be odd!')
+        raise CustomIndexError('temporal_radius must be odd!', func)
 
     def scale_val8x(value: int, chroma: bool = False) -> float:
         return scale_value(value, 8, vdepth, scale_offsets=not tv_range, chroma=chroma)
 
     neutral = [get_neutral_value(clip), get_neutral_value(clip, True)]
 
-    scaler = BicubicAuto(sharp / -50 + 1)
+    func = func or sized_grain
+
+    scaler = BicubicAuto(sharp / -50 + 1).ensure_obj(scaler, func)
 
     if not isinstance(strength, list):
         strength = [strength, strength / 2]
