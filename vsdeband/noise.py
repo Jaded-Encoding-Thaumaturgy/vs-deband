@@ -78,10 +78,10 @@ def sized_grain(
     # TODO make temporal_radius behave like other filters (like nl, mvtools)
 
     if temporal_radius <= 1:
-        raise CustomIndexError('temporal_radius must be >= 3!')
+        raise CustomIndexError('temporal_radius must be >= 3!', func)
 
     if temporal_radius % 2 == 0:
-        raise CustomIndexError('temporal_radius must be odd!')
+        raise CustomIndexError('temporal_radius must be odd!', func)
 
     def scale_val8x(value: int, chroma: bool = False) -> float:
         return scale_value(value, 8, vdepth, scale_offsets=not tv_range, chroma=chroma)
