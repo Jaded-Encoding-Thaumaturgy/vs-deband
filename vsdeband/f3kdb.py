@@ -3,10 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-from vstools import (
-    ColorRange, ColorRangeT, CustomIntEnum, CustomRuntimeError, FunctionUtil, PlanesT, core, fallback, inject_self,
-    normalize_seq, vs
-)
+from vstools import (ColorRange, ColorRangeT, CustomIntEnum, CustomRuntimeError, FuncExceptT,
+                     FunctionUtil, PlanesT, core, fallback, inject_self, normalize_seq, vs)
 
 from .abstract import Debander
 
@@ -131,15 +129,16 @@ class F3kdb(Debander):
         blur_first: bool | None = None,
         color_range: ColorRangeT | None = None,
         seed: int | None = None,
-        planes: PlanesT = None
+        planes: PlanesT = None,
+        _func: FuncExceptT | None = None
     ) -> vs.VideoNode:
+        func = FunctionUtil(clip, _func or self.deband, planes, (vs.GRAY, vs.YUV), range(8, 16))
+
         if not hasattr(core, 'neo_f3kdb'):
-            raise CustomRuntimeError('You are missing the neo_f3kdb plugin!')
+            raise CustomRuntimeError('You are missing the neo_f3kdb plugin!', func.func)
 
         if 'y_2' not in core.neo_f3kdb.Deband.__signature__.parameters:
-            raise CustomRuntimeError('You are using an outdated version of neo_f3kdb, upgrade now!')
-
-        func = FunctionUtil(clip, self.deband, planes, (vs.GRAY, vs.YUV), 16)
+            raise CustomRuntimeError('You are using an outdated version of neo_f3kdb, upgrade now!', func.func)
 
         radius = fallback(self.radius, radius)
 
@@ -147,13 +146,10 @@ class F3kdb(Debander):
         gry, grc = normalize_seq(fallback(self.grains, grains), 2)
 
         sample_mode = fallback(self.sample_mode, sample_mode)  # type: ignore
-        seed = fallback(self.seed, seed)
-        blur_first = fallback(self.blur_first, blur_first)
-        dynamic_grain = fallback(self.dynamic_grain, dynamic_grain)
 
         color_range = ColorRange.from_param(
             color_range, self.deband
-        ) or ColorRange.from_video(func.work_clip, func=self.deband)
+        ) or ColorRange.from_video(func.work_clip, func=func.func)
 
         random_algo_ref = 1
         random_param_ref = random_param_grain = 1.0
@@ -171,7 +167,8 @@ class F3kdb(Debander):
             sample_mode = sample_mode.sample_mode
 
         debanded = core.neo_f3kdb.Deband(
-            clip, radius, y, cb, cr, gry, grc, sample_mode.value, seed, blur_first, dynamic_grain,  # type: ignore
+            func.work_clip, radius, y, cb, cr, gry, grc,  # type: ignore
+            sample_mode.value, self.seed or seed, self.blur_first or blur_first, self.dynamic_grain or dynamic_grain,
             None, None, None, color_range.is_limited, 16, random_algo_ref, random_algo_ref,
             random_param_ref, random_param_grain, None, y1, cb1, cr1, y2, cb2, cr2, True
         )
