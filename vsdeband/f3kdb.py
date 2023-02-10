@@ -122,7 +122,7 @@ class F3kdb(Debander):
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode,
         radius: int = 16,
-        thr: int | list[int] = 7680,
+        thr: int | list[int] = 96,
         grains: int | list[int] = 0,
         sample_mode: SampleModeT = SampleMode.SQUARE,
         dynamic_grain: int | None = None,
@@ -166,9 +166,11 @@ class F3kdb(Debander):
             y2, cb2, cr2 = func.norm_seq(sample_mode.thr_max)
             sample_mode = sample_mode.sample_mode
 
+        blur_first = fallback(self.blur_first or blur_first, max(y, cb, cr) < 2048)  # type: ignore
+
         debanded = core.neo_f3kdb.Deband(
             func.work_clip, radius, y, cb, cr, gry, grc,  # type: ignore
-            sample_mode.value, self.seed or seed, self.blur_first or blur_first, self.dynamic_grain or dynamic_grain,
+            sample_mode.value, self.seed or seed, blur_first, self.dynamic_grain or dynamic_grain,
             None, None, None, color_range.is_limited, 16, random_algo_ref, random_algo_ref,
             random_param_ref, random_param_grain, None, y1, cb1, cr1, y2, cb2, cr2, True
         )
