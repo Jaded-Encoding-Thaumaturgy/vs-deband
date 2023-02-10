@@ -137,7 +137,7 @@ class F3kdb(Debander):
         if not hasattr(core, 'neo_f3kdb'):
             raise CustomRuntimeError('You are missing the neo_f3kdb plugin!', func.func)
 
-        if 'y_2' not in core.neo_f3kdb.Deband.__signature__.parameters:
+        if 'y_2' not in core.neo_f3kdb.Deband.__signature__.parameters:  # type: ignore
             raise CustomRuntimeError('You are using an outdated version of neo_f3kdb, upgrade now!', func.func)
 
         radius = fallback(self.radius, radius)

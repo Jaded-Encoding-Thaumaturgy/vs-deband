@@ -152,4 +152,4 @@ class Placebo(Debander):
         if not dynamic:
             raise NotImplementedError
 
-        return self.deband(clip, radius, thr, grains=grains, **kwargs)
+        return self.deband(clip, radius, thr, grains=grains, **kwargs)  # type: ignore
