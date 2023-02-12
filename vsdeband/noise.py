@@ -43,7 +43,7 @@ class _sized_grain:
 
         if 'sharp' in kwargs:
             warnings.warn('The "sharp" parameter is deprecated! Please use scaler=BicubicAuto(sharp / -50 + 1).')
-            kwargs.setdefault('scaler', BicubicAuto(kwargs.pop('sharp') / -50 + 1))
+            scaler = BicubicAuto(kwargs.pop('sharp') / -50 + 1)
 
         sx, sy = clip.width, clip.height
         vdepth = get_depth(clip)
