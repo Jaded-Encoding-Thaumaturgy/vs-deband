@@ -117,7 +117,7 @@ class _sized_grain:
 
             if aka_expr_available:
                 limit_expr = ['y {mid} - D! D@ abs DA! x DA@ - {low} < x DA@ + {high} > or x D@ x + ?']
-
+            else:
                 limit_expr = ['x y {mid} - abs - {low} < x y {mid} - abs + {high} > or x y {mid} - x + ?']
 
             if clip.format.sample_type == vs.FLOAT:
