@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Any, Callable, Sequence
 
-from vsexprtools import aka_expr_available, expr_func, norm_expr_planes
+from vsexprtools import complexpr_available, expr_func, norm_expr_planes
 from vskernels import BicubicAuto, Lanczos, ScalerT
 from vsmasktools import adg_mask
 from vstools import (
@@ -115,7 +115,7 @@ class _sized_grain:
             else:
                 hivals = list(hi)
 
-            if aka_expr_available:
+            if complexpr_available:
                 limit_expr = ['y {mid} - D! D@ abs DA! x DA@ - {low} < x DA@ + {high} > or x D@ x + ?']
             else:
                 limit_expr = ['x y {mid} - abs - {low} < x y {mid} - abs + {high} > or x y {mid} - x + ?']

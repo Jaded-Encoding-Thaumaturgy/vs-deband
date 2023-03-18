@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial
 from math import sqrt
 
-from vsexprtools import aka_expr_available, norm_expr, norm_expr_planes
+from vsexprtools import complexpr_available, norm_expr, norm_expr_planes
 from vskernels import Bilinear, Point, Scaler, ScalerT
 from vsrgtools import box_blur, gauss_blur
 from vstools import (
@@ -105,7 +105,7 @@ def guided_filter(
 
         denominator = denominator.std.PlaneStats(None, 0)
 
-        if aka_expr_available:
+        if complexpr_available:
             weight = norm_expr([weight_in, denominator], 'x 1e-06 + y.PlaneStatsAverage *', planes)
         else:
             weight = denominator.std.FrameEval(
@@ -119,7 +119,7 @@ def guided_filter(
         else:
             weight_in = weight_in.std.PlaneStats(None, 0)
 
-            if aka_expr_available:
+            if complexpr_available:
                 a = norm_expr(
                     [cov_Ip, weight_in, weight, var_I],
                     'x {thr} 1 1 1 -4 y.PlaneStatsMin y.PlaneStatsAverage 1e-6 - - / '
