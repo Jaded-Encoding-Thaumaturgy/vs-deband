@@ -30,7 +30,7 @@ class PlaceboDither(CustomIntEnum):
 
     DEFAULT = BLUE_NOISE
 
-    ORDERED_LU = 1
+    ORDERED_LUT = 1
     """
     Dither with an ordered (bayer) dither matrix, using a LUT. Low quality,
     and since this also uses a LUT, there's generally no advantage to picking
