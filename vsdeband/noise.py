@@ -40,7 +40,7 @@ class Grainer(ABC):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: int | None = None, *,
+        luma_scaling: float | None = None, *,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
     ) -> None:
@@ -318,7 +318,7 @@ class ChickenDream(Grainer):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: int | None = None, *,
+        luma_scaling: float | None = None, *,
         rad: float = 0.025, res: int = 1024, draft: bool = True, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
