@@ -310,6 +310,9 @@ class PlaceboGrain(Grainer):
 class ChickenDream(Grainer):
     """chkdr.grain plugin. https://github.com/EleonoreMizo/chickendream"""
 
+    def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
+        return True
+
     def __init__(
         self, strength: float | tuple[float, float] = 0.00,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
