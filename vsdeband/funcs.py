@@ -33,7 +33,7 @@ __all__ = [
 
 def mdb_bilateral(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 260, grains: int | tuple[int, int] = 0,
+    thr: int | list[int] = 260, grains: float | tuple[float, float] = 0.0,
     lthr: int | tuple[int, int] = (153, 0), elast: float = 3.0,
     bright_thr: int | None = None,
     debander: type[Debander] | Debander = F3kdb
@@ -80,7 +80,7 @@ def mdb_bilateral(
 
 def masked_deband(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 96, grains: int | list[int] = [12, 0],
+    thr: int | list[int] = 96, grains: float | list[float] = [0.23, 0],
     sigma: float = 1.25, rxsigma: list[int] = [50, 220, 300],
     pf_sigma: float | None = 1.25, brz: tuple[int, int] = (2500, 4500),
     rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP,
@@ -102,7 +102,7 @@ def masked_deband(
 
 def pfdeband(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 120, grains: int | list[int] = 0,
+    thr: int | list[int] = 120, grains: float | list[float] = 0.0,
     lthr: int | tuple[int, int] = (76, 0), elast: float = 2.5,
     bright_thr: int | None = None, scaler: ScalerT = Spline64,
     prefilter: Prefilter | VSFunction = partial(Prefilter.SCALEDBLUR, scale=1, radius=2),
