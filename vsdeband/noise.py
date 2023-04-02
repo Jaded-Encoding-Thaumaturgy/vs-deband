@@ -11,9 +11,9 @@ from vsmasktools import adg_mask
 from vsrgtools import BlurMatrix
 from vsscale import gamma2linear, linear2gamma
 from vstools import (
-    CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, Transfer, VSFunctionNoArgs,
-    check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y, inject_self, join, mod_x, plane,
-    split, vs, MatrixT
+    CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
+    Transfer, VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y,
+    inject_self, join, mod_x, plane, split, vs
 )
 
 from .f3kdb import F3kdb
@@ -394,6 +394,9 @@ def multi_graining(
     InvalidColorFamilyError.check(clip, (vs.GRAY, vs.YUV))
 
     length = len(grainers)
+
+    if length < 2:
+        raise CustomIndexError('You need to give at least two grainers!')
 
     norm_grainers = sorted([
         (
