@@ -261,7 +261,7 @@ class AddNoiseBase(Grainer):
             if min(*strength) <= 0.0 or max(*strength) >= 1.0:
                 raise ValueError('Poisson noise strength must be between 0.0 and 1.0 (not inclusive)!')
 
-            scale = (1 << (clip.format.bits_per_sample - 8)) - 1
+            scale = ((1 << (clip.format.bits_per_sample - 8)) - 1) if clip.format.bits_per_sample > 8 else 255
 
             strength = ((1.0 - stre) * scale for stre in strength)
 
