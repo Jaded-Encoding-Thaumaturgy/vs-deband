@@ -33,7 +33,7 @@ __all__ = [
 
 def mdb_bilateral(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 260, grains: float | tuple[float, float] = 0.0,
+    thr: int | list[int] = 260, grain: float | tuple[float, float] = 0.0,
     lthr: int | tuple[int, int] = (153, 0), elast: float = 3.0,
     bright_thr: int | None = None,
     debander: type[Debander] | Debander = F3kdb
@@ -47,7 +47,7 @@ def mdb_bilateral(
     :param clip:        Input clip.
     :param radius:      Banding detection range.
     :param thr:         Banding detection thr(s) for planes.
-    :param grains:      Specifies amount of grains added in the last debanding stage.
+    :param grain:       Specifies amount of grain added in the last debanding stage.
                         It happens after `vsrgtools.limit_filter`.
     :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
     :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
@@ -66,21 +66,21 @@ def mdb_bilateral(
 
     rad1, rad2, rad3 = round(radius * 4 / 3), round(radius * 2 / 3), round(radius / 3)
 
-    db1 = debander.deband(clip, radius=rad1, thr=[max(1, th // 2) for th in to_arr(thr)], grains=0)
-    db2 = debander.deband(db1, radius=rad2, thr=thr, grains=0)
-    db3 = debander.deband(db2, radius=rad3, thr=thr, grains=0)
+    db1 = debander.deband(clip, radius=rad1, thr=[max(1, th // 2) for th in to_arr(thr)], grain=0.0)
+    db2 = debander.deband(db1, radius=rad2, thr=thr, grain=0)
+    db3 = debander.deband(db2, radius=rad3, thr=thr, grain=0)
 
     limit = limit_filter(db3, db2, clip, thr=lthr, elast=elast, bright_thr=bright_thr)
 
-    if grains:
-        limit = debander.grain(limit, strength=grains)
+    if grain:
+        limit = debander.grain(limit, strength=grain)
 
     return depth(limit, bits)
 
 
 def masked_deband(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 96, grains: float | list[float] = [0.23, 0],
+    thr: int | list[int] = 96, grain: float | list[float] = [0.23, 0],
     sigma: float = 1.25, rxsigma: list[int] = [50, 220, 300],
     pf_sigma: float | None = 1.25, brz: tuple[int, int] = (2500, 4500),
     rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP,
@@ -93,7 +93,7 @@ def masked_deband(
 
     deband_mask = deband_detail_mask(clip, sigma, rxsigma, pf_sigma, brz, rg_mode)
 
-    deband = debander.deband(clip, radius=radius, thr=thr, grains=grains, **kwargs)
+    deband = debander.deband(clip, radius=radius, thr=thr, grain=grain, **kwargs)
 
     masked = deband.std.MaskedMerge(clip, deband_mask)
 
@@ -102,7 +102,7 @@ def masked_deband(
 
 def pfdeband(
     clip: vs.VideoNode, radius: int = 16,
-    thr: int | list[int] = 120, grains: float | list[float] = 0.0,
+    thr: int | list[int] = 120, grain: float | list[float] = 0.0,
     lthr: int | tuple[int, int] = (76, 0), elast: float = 2.5,
     bright_thr: int | None = None, scaler: ScalerT = Spline64,
     prefilter: Prefilter | VSFunction = partial(Prefilter.SCALEDBLUR, scale=1, radius=2),
@@ -114,7 +114,7 @@ def pfdeband(
     :param clip:        Input clip.
     :param radius:      Banding detection range.
     :param thr:         Banding detection thr(s) for planes.
-    :param grains:      Specifies amount of grains added in the last debanding stage.
+    :param grain:       Specifies amount of grain added in the last debanding stage.
                         It happens after `vsrgtools.limit_filter`.
     :param lthr:        Threshold of the limiting. Refer to `vsrgtools.limit_filter`.
     :param elast:       Elasticity of the limiting. Refer to `vsrgtools.limit_filter`.
@@ -137,7 +137,7 @@ def pfdeband(
     blur = prefilter(clip, **kwargs)
     change_res = (blur.width, blur.height) != (clip.width, clip.height)
 
-    deband = debander.deband(blur, radius=radius, thr=thr, grains=grains)
+    deband = debander.deband(blur, radius=radius, thr=thr, grain=grain)
 
     out = deband if change_res else clip
 

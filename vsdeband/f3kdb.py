@@ -104,7 +104,7 @@ class F3kdb(Debander):
 
     radius: int | None = None
     thr: int | list[int] | None = None
-    grains: int | list[int] | None = None
+    grain: int | list[int] | None = None
 
     sample_mode: SampleModeT | None = None
 
@@ -118,7 +118,7 @@ class F3kdb(Debander):
         self, clip: vs.VideoNode,
         radius: int = 16,
         thr: int | list[int] = 96,
-        grains: float | list[float] = 0.0,
+        grain: float | list[float] = 0.0,
         sample_mode: SampleModeT = SampleMode.SQUARE,
         dynamic_grain: int | None = None,
         blur_first: bool | None = None,
@@ -138,7 +138,7 @@ class F3kdb(Debander):
         radius = fallback(self.radius, radius)
 
         y, cb, cr = func.norm_seq(fallback(self.thr, thr))
-        gry, grc = normalize_seq(fallback(self.grains, grains), 2)
+        gry, grc = normalize_seq(fallback(self.grain, grain), 2)
 
         sample_mode = fallback(self.sample_mode, sample_mode)  # type: ignore
 

@@ -65,7 +65,7 @@ class Placebo(Debander):
 
     radius: float | None = None
     thr: float | list[float] | None = None
-    grains: float | list[float] | None = None
+    grain: float | list[float] | None = None
 
     iterations: int | None = None
 
@@ -74,7 +74,7 @@ class Placebo(Debander):
     @inject_self
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
-        iterations: int = 1, grains: float | list[float] = 0.5, dither: PlaceboDither = PlaceboDither.DEFAULT
+        iterations: int = 1, grain: float | list[float] = 0.5, dither: PlaceboDither = PlaceboDither.DEFAULT
     ) -> vs.VideoNode:
         """
         Main deband function, wrapper for `placebo.Deband <https:/github.com/Lypheo/vs-placebo#vs-placebo>`_
@@ -108,12 +108,12 @@ class Placebo(Debander):
         radius = fallback(self.radius, radius)
         thr = normalize_seq(fallback(self.thr, thr))  # type: ignore[arg-type]
         iterations = fallback(self.iterations, iterations)
-        grains = normalize_seq(fallback(self.grains, grains))  # type: ignore[arg-type]
+        grain = normalize_seq(fallback(self.grain, grain))  # type: ignore[arg-type]
         dither = fallback(self.dither, dither)
 
         debs = [
             p.placebo.Deband(1, iterations, thr, radius, gra * (1 << 5) * 0.8, **dither.placebo_args)
-            for p, thr, gra in zip(split(clip), thr, grains)
+            for p, thr, gra in zip(split(clip), thr, grain)
         ]
 
         if len(debs) == 1:
