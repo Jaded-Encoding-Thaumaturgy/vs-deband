@@ -113,11 +113,6 @@ class F3kdb(Debander):
 
     blur_first: bool | None = None
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
-        self.config = Debander.SupportsConfig(True, True, False)
-
     @inject_self
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode,
@@ -176,14 +171,3 @@ class F3kdb(Debander):
         )
 
         return func.return_clip(debanded)
-
-    @inject_self
-    def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: int | tuple[int, int] = 4, dynamic: bool | int = True,
-        radius: int = 16, sample_mode: SampleMode = SampleMode.SQUARE,
-        color_range: ColorRangeT | None = None, seed: int | None = None, planes: PlanesT = None
-    ) -> vs.VideoNode:
-        return self.deband(
-            clip, radius, [1, 1, 1],
-            strength, sample_mode, dynamic, None, color_range, seed, planes  # type: ignore
-        )

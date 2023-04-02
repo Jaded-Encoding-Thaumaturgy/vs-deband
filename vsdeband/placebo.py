@@ -1,11 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
-from vstools import (
-    CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, kwargs_fallback, normalize_seq, split, vs
-)
+from vstools import CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, normalize_seq, split, vs
 
 from .abstract import Debander
 
@@ -74,11 +71,6 @@ class Placebo(Debander):
 
     dither: PlaceboDither | None = None
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
-        self.config = Debander.SupportsConfig(False, True, False)
-
     @inject_self
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
@@ -128,28 +120,3 @@ class Placebo(Debander):
             return debs[0]
 
         return join(debs, clip.format.color_family)
-
-    @inject_self
-    def grain(  # type: ignore[override]
-        self, clip: vs.VideoNode, strength: float | tuple[int, int],
-        dynamic: bool | int = True, **kwargs: Any
-    ) -> vs.VideoNode:
-        """
-        Add Placebo grain to a clip.
-
-        :param clip:            Source clip
-        :param strength:        Strength of the grain per plane.
-        :param dynamic:         Graining mode. Static means no changes per frame, dynamic means changes every frame.
-
-        :return:                Grained clip
-        """
-        assert check_variable(clip, self.__class__.grain)
-
-        radius = kwargs_fallback(self.radius, (kwargs, 'radius'), 0)
-        thr = normalize_seq(kwargs_fallback(self.thr, (kwargs, 'thr'), 0))
-        grains = normalize_seq(strength)
-
-        if not dynamic:
-            raise NotImplementedError
-
-        return self.deband(clip, radius, thr, grains=grains, **kwargs)  # type: ignore
