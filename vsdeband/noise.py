@@ -80,6 +80,11 @@ class Grainer(ABC):
     ) -> vs.VideoNode:
         ...
 
+    def _check_input(
+        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> None:
+        ...
+
     @inject_self.init_kwargs.clean
     def grain(
         self, clip: vs.VideoNode, strength: float | tuple[float, float] | None = None,
@@ -114,6 +119,7 @@ class Grainer(ABC):
             def _try_grain(src: vs.VideoNode, stre: tuple[float, float] = strength, **args: Any) -> vs.VideoNode:
                 args = kwargs | dict(strength=stre, dynamic=dynamic) | args
                 try:
+                    self._check_input(src, **args)
                     grained = self._perform_graining(src, **args)
                 except NotImplementedError as e:
                     reason, *_ = map(str, e.args)
@@ -245,15 +251,16 @@ class AddNoiseBase(Grainer):
 
         return kwargs
 
-    def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
+    def _is_poisson(self, **kwargs: Any) -> bool:
         return kwargs.get('type', None) == 4
 
-    def _perform_graining(
-        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
-    ) -> vs.VideoNode:
-        is_poisson = kwargs.get('type', None) == 4
+    def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
+        return self._is_poisson(**kwargs)
 
-        if is_poisson:
+    def _check_input(
+        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> None:
+        if self._is_poisson(**kwargs):
             if not dynamic:
                 raise NotImplementedError('dynamic-only')
 
@@ -263,8 +270,11 @@ class AddNoiseBase(Grainer):
             if min(*strength) < 0.0 or max(*strength) >= 1.0:
                 raise ValueError('Poisson noise strength must be between 0.0 and 1.0 (not inclusive)!')
 
+    def _perform_graining(
+        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> vs.VideoNode:
+        if self._is_poisson(**kwargs):
             scale = ((1 << (clip.format.bits_per_sample - 8)) - 1) if clip.format.bits_per_sample > 8 else 255
-
             strength = (((1.0 - stre) * scale) if stre else 0.0 for stre in strength)
 
         return core.noise.Add(clip, *strength, constant=not dynamic, **kwargs)
@@ -301,11 +311,15 @@ class F3kdbGrain(Grainer):
 class PlaceboGrain(Grainer):
     """placebo.Deband plugin. https://github.com/Lypheo/vs-placebo"""
 
+    def _check_input(
+        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> None:
+        if not dynamic:
+            raise NotImplementedError('dynamic-only')
+
     def _perform_graining(
         self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
     ) -> vs.VideoNode:
-        if not dynamic:
-            raise NotImplementedError('dynamic-only')
         return Placebo.deband(clip, 8, 1, 1, list(strength), **kwargs)
 
 
