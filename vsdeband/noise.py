@@ -129,20 +129,20 @@ class Grainer(ABC):
 
                         if str_luma > 0 and str_chroma > 0:
                             return join(
-                                _try_grain(plane(src, 0), str_luma, *args, **kwargs),
-                                _try_grain(plane(src, 1), str_chroma, *args, **kwargs),
-                                _try_grain(plane(src, 2), str_chroma, *args, **kwargs)
+                                _try_grain(plane(src, 0), str_luma),
+                                _try_grain(plane(src, 1), str_chroma),
+                                _try_grain(plane(src, 2), str_chroma)
                             )
                         elif str_luma > 0:
                             return join(
-                                _try_grain(plane(src, 0), str_luma, *args, **kwargs),
+                                _try_grain(plane(src, 0), str_luma),
                                 src
                             )
                         elif str_chroma > 0:
                             return join(
                                 src,
-                                _try_grain(plane(src, 1), str_chroma, *args, **kwargs),
-                                _try_grain(plane(src, 2), str_chroma, *args, **kwargs)
+                                _try_grain(plane(src, 1), str_chroma),
+                                _try_grain(plane(src, 2), str_chroma)
                             )
 
                         return src
