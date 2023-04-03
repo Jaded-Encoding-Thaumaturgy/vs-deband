@@ -369,7 +369,17 @@ class LinearLightGrainer(Grainer):
     def _perform_graining(
         self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
-        kwargs = self._get_inner_kwargs(strength[0] if isinstance(strength, tuple) else strength, **kwargs)
+        if isinstance(strength, tuple):
+            if strength[0] != strength[1]:
+                if clip.format.color_family is vs.YUV:
+                    return join(
+                        self._perform_graining(get_y(clip), strength[0]) if strength[0] else get_y(clip),
+                        self._perform_graining(clip, strength[1]) if strength[1] else clip,
+                    )
+
+                raise CustomValueError('GRAY/RGB clips can\'t have different graining strength for chroma!')
+            else:
+                strength = strength[0]
 
         gamma = 1.0 - (self.gamma / 2)
 
@@ -383,6 +393,7 @@ class LinearLightGrainer(Grainer):
         else:
             input_clip = clip
 
+        kwargs = self._get_inner_kwargs(strength, **kwargs)
         out_clip = self._perform_linear_graining(input_clip.std.Limiter(), **kwargs)
 
         if clip.format.color_family is vs.YUV:
@@ -420,14 +431,6 @@ class ChickenDreamBase(LinearLightGrainer):
 
     def _perform_linear_graining(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
         return core.chkdr.grain(clip, **kwargs)
-
-    def _check_input(
-        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool = True, **kwargs: Any
-    ) -> None:
-        super()._check_input(clip, strength, dynamic, **kwargs)
-
-        if (isinstance(strength, tuple) and strength[0] != strength[1]) and clip.format.num_planes > 1:
-            raise NotImplementedError('single-plane')
 
 
 class ChickenDreamBox(ChickenDreamBase):
