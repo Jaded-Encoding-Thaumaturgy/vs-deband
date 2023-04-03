@@ -110,6 +110,11 @@ class Grainer(ABC):
         def _wrap_implementation(clip: vs.VideoNode, neutral_out: bool) -> vs.VideoNode:
             input_dep = self._is_input_dependent(clip, **kwargs)
 
+            if input_dep and do_taverage and not kwargs.get('unsafe_graining', False):
+                raise CustomValueError(
+                    'You can\'t have temporal averaging with input dependent graining as it will create ghosting!'
+                )
+
             if neutral_out and not input_dep:
                 lenght = clip.num_frames + ((self.temporal_radius * 2) if do_taverage else 0)
                 base_clip = clip.std.BlankClip(length=lenght, color=get_neutral_values(clip))
