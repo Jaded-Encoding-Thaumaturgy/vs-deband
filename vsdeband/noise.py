@@ -27,6 +27,7 @@ __all__ = [
     'F3kdbGrain', 'PlaceboGrain',
 
     'ChickenDream',
+    'LinearLightGrainer',
 
     'multi_graining', 'MultiGrainerT'
 ]
@@ -323,41 +324,40 @@ class PlaceboGrain(Grainer):
         return Placebo.deband(clip, 8, 1, 1, list(strength), **kwargs)
 
 
-class ChickenDreamBase(Grainer):
-    """chkdr.grain plugin. https://github.com/EleonoreMizo/chickendream"""
+class LinearLightGrainer(Grainer):
+    """Base grainer depending on linear RGB clip, input dependent."""
 
     def __init__(
-        self, strength: float | tuple[float, float], draft: bool,
+        self, strength: float | tuple[float, float],
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *,
-        rad: float = 0.025, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        luma_scaling: float | None = None, *, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
             strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
-            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, **kwargs
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, **kwargs
         )
 
         if not 0.0 <= gamma <= 1.0:
             raise CustomOverflowError('Gamma must be between 0.0 and 1.0 (inclusive)!', self.__class__, gamma)
-
-        self.draft = draft
         self.gamma = gamma
-
-    def _get_kw(self, kwargs: KwargsT) -> KwargsT:
-        return super()._get_kw(kwargs) | dict(draft=self.draft)
 
     def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
         return True
 
-    def _get_chkr_args(self, strength: float, **kwargs: Any) -> KwargsT:
-        return kwargs | dict(sigma=strength, rad=kwargs.get('rad') / 10)
+    @abstractmethod
+    def _get_inner_kwargs(self, strength: float, **kwargs: Any) -> KwargsT:
+        ...
 
-    def _perform_graining(
-        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool | int = True, **kwargs: Any
-    ) -> vs.VideoNode:
+    @abstractmethod
+    def _perform_linear_graining(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
+        ...
+
+    def _check_input(
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> None:
         assert check_variable(clip, self.__class__.grain)
 
         if clip.format.bits_per_sample != 32:
@@ -366,10 +366,10 @@ class ChickenDreamBase(Grainer):
         if not dynamic:
             raise NotImplementedError('dynamic-only')
 
-        if strength[0] != strength[1] and clip.format.num_planes > 1:
-            raise NotImplementedError('single-plane')
-
-        kwargs = self._get_chkr_args(strength[0], **kwargs)
+    def _perform_graining(
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool | int = True, **kwargs: Any
+    ) -> vs.VideoNode:
+        kwargs = self._get_inner_kwargs(strength[0] if isinstance(strength, tuple) else strength, **kwargs)
 
         gamma = 1.0 - (self.gamma / 2)
 
@@ -383,7 +383,7 @@ class ChickenDreamBase(Grainer):
         else:
             input_clip = clip
 
-        out_clip = input_clip.std.Limiter().chkdr.grain(**kwargs)
+        out_clip = self._perform_linear_graining(input_clip.std.Limiter(), **kwargs)
 
         if clip.format.color_family is vs.YUV:
             out_clip = self.kernel.resample(
@@ -391,6 +391,43 @@ class ChickenDreamBase(Grainer):
             )
 
         return out_clip
+
+
+class ChickenDreamBase(LinearLightGrainer):
+    """chkdr.grain plugin. https://github.com/EleonoreMizo/chickendream"""
+
+    def __init__(
+        self, strength: float | tuple[float, float], draft: bool,
+        size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
+        dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
+        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        luma_scaling: float | None = None, *,
+        rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
+    ) -> None:
+        super().__init__(
+            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, gamma=gamma, **kwargs
+        )
+
+        self.draft = draft
+
+    def _get_kw(self, kwargs: KwargsT) -> KwargsT:
+        return super()._get_kw(kwargs) | dict(draft=self.draft)
+
+    def _get_inner_kwargs(self, strength: float, **kwargs: Any) -> KwargsT:
+        return kwargs | dict(sigma=strength, rad=kwargs.get('rad') / 10)
+
+    def _perform_linear_graining(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
+        return core.chkdr.grain(clip, **kwargs)
+
+    def _check_input(
+        self, clip: vs.VideoNode, strength: float | tuple[float, float], dynamic: bool = True, **kwargs: Any
+    ) -> None:
+        super()._check_input(clip, strength, dynamic, **kwargs)
+
+        if (isinstance(strength, tuple) and strength[0] != strength[1]) and clip.format.num_planes > 1:
+            raise NotImplementedError('single-plane')
 
 
 class ChickenDreamBox(ChickenDreamBase):
@@ -407,8 +444,8 @@ class ChickenDreamBox(ChickenDreamBase):
             matrix=matrix, kernel=kernel, neutral_out=neutral_out, res=res, dev=dev, gamma=gamma, **kwargs
         )
 
-    def _get_chkr_args(self, strength: float, **kwargs: Any) -> KwargsT:
-        return super()._get_chkr_args(0.0, **(kwargs | dict(rad=strength)))
+    def _get_inner_kwargs(self, strength: float, **kwargs: Any) -> KwargsT:
+        return super()._get_inner_kwargs(0.0, **(kwargs | dict(rad=strength)))
 
 
 class ChickenDreamGauss(ChickenDreamBase):
