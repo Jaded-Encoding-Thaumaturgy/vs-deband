@@ -26,8 +26,9 @@ __all__ = [
 
     'F3kdbGrain', 'PlaceboGrain',
 
-    'ChickenDream',
     'LinearLightGrainer',
+
+    'ChickenDream', 'FilmGrain',
 
     'multi_graining', 'MultiGrainerT'
 ]
@@ -464,6 +465,31 @@ class ChickenDreamGauss(ChickenDreamBase):
             strength, False, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
             matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, gamma=gamma, **kwargs
         )
+
+
+class FilmGrain(LinearLightGrainer):
+    """fgrain_cuda.Add plugin. https://github.com/AmusementClub/vs-fgrain-cuda"""
+
+    def __init__(
+        self, strength: float | tuple[float, float] = 0.8,
+        size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
+        dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
+        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        luma_scaling: float | None = None, *,
+        rad: float = 0.1, iterations: int = 800, dev: float = 0.0, gamma: float = 1.0,
+        matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
+    ) -> None:
+        super().__init__(
+            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, gamma=gamma,
+            grain_radius_mean=rad, num_iterations=iterations, grain_radius_std=dev, **kwargs
+        )
+
+    def _get_inner_kwargs(self, strength: float, **kwargs: Any) -> KwargsT:
+        return kwargs | dict(sigma=strength)
+
+    def _perform_linear_graining(self, clip: vs.VideoNode, **kwargs: Any) -> vs.VideoNode:
+        return join(core.fgrain_cuda.Add(p, **kwargs) for p in split(clip))
 
 
 class ChickenDream(ChickenDreamBox):
