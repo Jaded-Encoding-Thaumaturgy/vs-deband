@@ -80,7 +80,7 @@ class Grainer(ABC):
     ) -> vs.VideoNode:
         ...
 
-    @inject_self
+    @inject_self.init_kwargs.clean
     def grain(
         self, clip: vs.VideoNode, strength: float | tuple[float, float] | None = None,
         dynamic: bool | None = None, **kwargs: Any
