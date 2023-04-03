@@ -309,33 +309,40 @@ class PlaceboGrain(Grainer):
         return Placebo.deband(clip, 8, 1, 1, list(strength), **kwargs)
 
 
-class ChickenDream(Grainer):
+class ChickenDreamBase(Grainer):
     """chkdr.grain plugin. https://github.com/EleonoreMizo/chickendream"""
 
-    def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
-        return True
-
     def __init__(
-        self, strength: float | tuple[float, float] = 0.00,
+        self, strength: float | tuple[float, float], draft: bool,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, *,
-        rad: float = 0.025, res: int = 1024, draft: bool = True, gamma: float = 1.0,
+        rad: float = 0.025, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
             strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
-            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, draft=draft, **kwargs
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, **kwargs
         )
 
         if not 0.0 <= gamma <= 1.0:
             raise CustomOverflowError('Gamma must be between 0.0 and 1.0 (inclusive)!', self.__class__, gamma)
 
+        self.draft = draft
         self.gamma = gamma
 
+    def _get_kw(self, kwargs: KwargsT) -> KwargsT:
+        return super()._get_kw(kwargs) | dict(draft=self.draft)
+
+    def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
+        return True
+
+    def _get_chkr_args(self, strength: float, **kwargs: Any) -> KwargsT:
+        return kwargs | dict(sigma=strength, rad=kwargs.get('rad') / 10)
+
     def _perform_graining(
-        self, clip: vs.VideoNode, strength: tuple[float, float] = 0.35, dynamic: bool | int = True, **kwargs: Any
+        self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool | int = True, **kwargs: Any
     ) -> vs.VideoNode:
         assert check_variable(clip, self.__class__.grain)
 
@@ -348,7 +355,7 @@ class ChickenDream(Grainer):
         if strength[0] != strength[1] and clip.format.num_planes > 1:
             raise NotImplementedError('single-plane')
 
-        kwargs |= dict(sigma=strength[0])
+        kwargs = self._get_chkr_args(strength[0], **kwargs)
 
         gamma = 1.0 - (self.gamma / 2)
 
@@ -370,6 +377,47 @@ class ChickenDream(Grainer):
             )
 
         return out_clip
+
+
+class ChickenDreamBox(ChickenDreamBase):
+    def __init__(
+        self, strength: float | tuple[float, float] = 0.25,
+        size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
+        dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
+        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        luma_scaling: float | None = None, *, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
+    ) -> None:
+        super().__init__(
+            strength, True, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, res=res, dev=dev, gamma=gamma, **kwargs
+        )
+
+    def _get_chkr_args(self, strength: float, **kwargs: Any) -> KwargsT:
+        return super()._get_chkr_args(0.0, **(kwargs | dict(rad=strength)))
+
+
+class ChickenDreamGauss(ChickenDreamBase):
+    def __init__(
+        self, strength: float | tuple[float, float] = 0.35,
+        size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
+        dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
+        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        luma_scaling: float | None = None, *, rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
+    ) -> None:
+        super().__init__(
+            strength, False, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, gamma=gamma, **kwargs
+        )
+
+
+class ChickenDream(ChickenDreamBox):
+    class BOX(ChickenDreamBox):
+        ...
+
+    class GAUSS(ChickenDreamGauss):
+        ...
 
 
 def multi_graining(
