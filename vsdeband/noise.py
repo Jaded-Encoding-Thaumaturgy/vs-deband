@@ -258,12 +258,12 @@ class AddNoiseBase(Grainer):
             if clip.format.bits_per_sample > 16:
                 raise NotImplementedError('bad-depth-16')
 
-            if min(*strength) <= 0.0 or max(*strength) >= 1.0:
+            if min(*strength) < 0.0 or max(*strength) >= 1.0:
                 raise ValueError('Poisson noise strength must be between 0.0 and 1.0 (not inclusive)!')
 
             scale = ((1 << (clip.format.bits_per_sample - 8)) - 1) if clip.format.bits_per_sample > 8 else 255
 
-            strength = ((1.0 - stre) * scale for stre in strength)
+            strength = (((1.0 - stre) * scale) if stre else 0.0 for stre in strength)
 
         return core.noise.Add(clip, *strength, constant=not dynamic, **kwargs)
 
