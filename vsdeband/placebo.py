@@ -74,7 +74,7 @@ class Placebo(Debander):
     @inject_self
     def deband(  # type: ignore[override]
         self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
-        iterations: int = 1, grain: float | list[float] = 0.5, dither: PlaceboDither = PlaceboDither.DEFAULT
+        iterations: int = 1, grain: float | list[float] = 0.0, dither: PlaceboDither = PlaceboDither.DEFAULT
     ) -> vs.VideoNode:
         """
         Main deband function, wrapper for `placebo.Deband <https:/github.com/Lypheo/vs-placebo#vs-placebo>`_
