@@ -98,7 +98,19 @@ class Grainer(ABC):
             strength = self.strength
 
         dynamic = fallback(dynamic, self.dynamic)
-        strength = strength if isinstance(strength, tuple) else (strength, strength)
+        strength = strength if isinstance(strength, tuple) else (
+            strength, strength if clip.format.num_planes > 1 else 0.0
+        )
+
+        if max(strength) <= 0.0:
+            return clip
+
+        if strength[0] <= 0.0 and strength[1] > 0.0:
+            planes = [1, 2]
+        elif strength[0] > 0.0 and strength[1] <= 0.0:
+            planes = 0
+        else:
+            planes = None
 
         do_taverage = (
             dynamic
@@ -106,9 +118,9 @@ class Grainer(ABC):
             and (clip.num_frames > self.temporal_radius * 2)
         )
         do_protect_chroma = self.protect_chroma and strength[1] > 0.0 and clip.format.color_family is vs.YUV
+        input_dep = self._is_input_dependent(clip, **kwargs)
 
         def _wrap_implementation(clip: vs.VideoNode, neutral_out: bool) -> vs.VideoNode:
-            input_dep = self._is_input_dependent(clip, **kwargs)
 
             if input_dep and do_taverage and not kwargs.get('unsafe_graining', False):
                 raise CustomValueError(
@@ -212,13 +224,11 @@ class Grainer(ABC):
 
         neutral = get_neutral_values(clip)
 
-        if not self.neutral_out:
-            if clip.format.sample_type is vs.FLOAT:
-                grained = norm_expr([clip, grained], ('x y 0.5 - +', 'x y +'))
-            else:
-                grained = clip.std.MergeDiff(grained)
-
-        merge_clip = grained.std.BlankClip(color=get_neutral_values(grained)) if self.neutral_out else clip
+        if self.neutral_out:
+            merge_clip = grained.std.MakeDiff(grained)[0].std.Loop(grained.num_frames)
+        else:
+            merge_clip = clip
+            grained = clip.std.MergeDiff(grained, planes)
 
         if do_protect_chroma:
             neutral_mask = Lanczos.resample(clip, clip.format.replace(subsampling_h=0, subsampling_w=0))
