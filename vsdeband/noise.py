@@ -128,8 +128,8 @@ class Grainer(ABC):
                 )
 
             if neutral_out and not input_dep:
-                lenght = clip.num_frames + ((self.temporal_radius * 2) if do_taverage else 0)
-                base_clip = clip.std.BlankClip(length=lenght, color=get_neutral_values(clip))
+                length = clip.num_frames + ((self.temporal_radius * 2) if do_taverage else 0)
+                base_clip = clip.std.BlankClip(length=length, color=get_neutral_values(clip))
             elif do_taverage:
                 base_clip = (clip[0] * self.temporal_radius) + clip + (clip[-1] * self.temporal_radius)
             else:
