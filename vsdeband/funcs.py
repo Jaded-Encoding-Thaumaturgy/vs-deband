@@ -82,7 +82,7 @@ def masked_deband(
     clip: vs.VideoNode, radius: int = 16,
     thr: float | list[float] = 96, grain: float | list[float] = [0.23, 0],
     sigma: float = 1.25, rxsigma: list[int] = [50, 220, 300],
-    pf_sigma: float | None = 1.25, brz: tuple[int, int] = (0.38, 0.68),
+    pf_sigma: float | None = 1.25, brz: tuple[float, float] = (0.038, 0.068),
     rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP,
     debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:

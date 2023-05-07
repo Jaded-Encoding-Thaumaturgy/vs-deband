@@ -12,7 +12,7 @@ __all__ = [
 
 def deband_detail_mask(
     clip: vs.VideoNode, sigma: float = 1.0, rxsigma: list[int] = [50, 200, 350],
-    pf_sigma: float | None = 1.0, brz: tuple[float, float] = (0.38, 0.68),
+    pf_sigma: float | None = 1.0, brz: tuple[float, float] = (0.038, 0.068),
     rg_mode: RemoveGrainModeT = RemoveGrainMode.MINMAX_MEDIAN_OPP
 ) -> vs.VideoNode:
     clip_y = get_y(clip)
@@ -21,7 +21,7 @@ def deband_detail_mask(
         clip_y if pf_sigma is None else gauss_blur(clip_y, pf_sigma), rxsigma, upper_thr=0.005
     )
 
-    brz0, brz1 = (br / 10 for br in brz)
+    brz0, brz1 = brz
 
     blur_ret = gauss_blur(ret, sigma)
     blur_ret_diff = Morpho.deflate(ExprOp.SUB(blur_ret, ret))
