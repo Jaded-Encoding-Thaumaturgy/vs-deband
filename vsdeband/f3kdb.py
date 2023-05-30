@@ -137,7 +137,7 @@ class F3kdb(Debander):
 
         radius = fallback(self.radius, radius)
 
-        y, cb, cr = func.norm_seq(fallback(self.thr, thr))
+        y, cb, cr = normalize_seq(fallback(self.thr, thr), 3)
         gry, grc = normalize_seq(fallback(self.grain, grain), 2)
 
         sample_mode = fallback(self.sample_mode, sample_mode)  # type: ignore
