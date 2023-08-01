@@ -4,20 +4,21 @@ from functools import partial
 from math import ceil
 from typing import Any
 
-from vsdenoise import Prefilter
+from vsdenoise import Prefilter, frequency_merge
 from vsexprtools import ExprOp
 from vskernels import Scaler, ScalerT, Spline64
-from vsmasktools import Morpho
-from vsrgtools import RemoveGrainMode, RemoveGrainModeT, limit_filter, removegrain
+from vsmasktools import FDoG, Morpho, flat_mask, texture_mask
+from vsrgtools import MeanMode, RemoveGrainMode, RemoveGrainModeT, box_blur, gauss_blur, limit_filter, removegrain
 from vstools import (
-    ColorRange, PlanesT, VSFunction, check_variable, depth, expect_bits, fallback, normalize_planes, normalize_seq,
-    scale_value, to_arr, vs
+    ColorRange, PlanesT, VSFunction, check_ref_clip, check_variable, depth, expect_bits, fallback, normalize_planes,
+    normalize_seq, scale_value, to_arr, vs
 )
 
 from .abstract import Debander
 from .f3kdb import F3kdb
 from .filters import guided_filter
 from .mask import deband_detail_mask
+from .placebo import Placebo
 from .types import GuidedFilterMode
 
 __all__ = [
@@ -27,7 +28,9 @@ __all__ = [
 
     'pfdeband',
 
-    'guided_deband'
+    'guided_deband',
+
+    'DebandPassPresets', 'multi_deband'
 ]
 
 
@@ -194,3 +197,90 @@ def guided_deband(
         deband = deband.std.MaskedMerge(clip, rmask, planes=planes)
 
     return deband
+
+
+class DebandPassPresets:
+    LIGHT = (
+        (F3kdb(16, 120), False, False),
+        (F3kdb(31, 160), False, True),
+        (Placebo(8, 2.5), False, False),
+        (Placebo(16, 1.5), False, True),
+        (Placebo(24, 1.0), False, True),
+    )
+    MEDIUM = (
+        (F3kdb(16, 120), False, False),
+        (F3kdb(31, 160), False, True),
+        (Placebo(8, 1.75), False, False),
+        (Placebo(16, 1.275), False, True),
+        (Placebo(24, 0.8), False, True),
+    )
+    STRONG = (
+        (F3kdb(16, 120), False, False),
+        (F3kdb(31, 160), True, False),
+        (Placebo(8, 2.5), False, False),
+        (Placebo(16, 1.5), True, False),
+        (Placebo(24, 1.0), True, False),
+    )
+
+
+def multi_deband(
+    clip: vs.VideoNode, *passes: Debander | tuple[Debander, bool] | tuple[Debander, bool, bool],
+    ref: vs.VideoNode | None = None, base_db: Debander = F3kdb(8, 100), lowpass_db: Debander = Placebo(24, 6.0),
+    edgemask: vs.VideoNode | None = None, textures: vs.VideoNode | None = None, **freq_merge_kwargs: Any
+) -> vs.VideoNode:
+    ref = check_ref_clip(clip, ref, multi_deband)
+
+    if edgemask is None:
+        edgemask = FDoG.edgemask(ref, 0.25, 1.0, 2, planes=(0, True))
+
+    if textures is None:
+        edges = flat_mask(ref, 6, 0.025, False)
+
+        textures = ExprOp.MAX(
+            texture_mask(ref, thr=0.001, blur=3, points=[
+                (False, 1.15), (True, 1.75), (False, 2.5),
+                (True, 5.0), (False, 7.5), (False, 10.0)
+            ]).resize.Bicubic(format=vs.YUV444P16), split_planes=True
+        )
+        textures = box_blur(ExprOp.SUB(textures, edges), 2)
+
+    line_big = ExprOp.ADD(
+        edgemask, gauss_blur(edgemask.std.Maximum(), 0.75), expr_suffix='4 *'
+    ).std.Maximum()
+
+    linemask_deband = gauss_blur(line_big.std.BinarizeMask(20 << 10), 0.45)
+
+    base_deband = base_db.deband(clip)
+    lowpass_deband = lowpass_db.deband(clip).std.MaskedMerge(base_deband, linemask_deband)
+
+    freq_merge_kwargs = dict(mode_high=MeanMode.HARMONIC) | freq_merge_kwargs
+
+    def _norm_pass(
+        dbpass: Debander | tuple[Debander, bool] | tuple[Debander, bool, bool]
+    ) -> tuple[Debander, bool, bool]:
+        mask, base_db = False, True
+
+        if isinstance(dbpass, tuple):
+            debander, mask, *other = dbpass
+
+            if other:
+                base_db = other[0]
+        else:
+            debander = dbpass
+
+        return debander, mask, base_db
+
+    deband = frequency_merge(
+        base_deband,
+        (
+            debanded
+            if (debanded := debander.deband(clip if base_db else base_deband))
+            and not mask else debanded.std.MaskedMerge(base_deband, textures)
+            for debander, mask, base_db in map(_norm_pass, passes)
+        ),
+        lowpass=lambda *args, **kwargs: lowpass_deband, **freq_merge_kwargs
+    )
+
+    return deband.std.MaskedMerge(
+        clip.std.Merge(base_deband, 0.5), textures.std.Expr('x 2 *')
+    )
