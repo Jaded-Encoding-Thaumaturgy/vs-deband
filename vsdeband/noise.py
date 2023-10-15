@@ -12,7 +12,7 @@ from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
     VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y, inject_self,
-    join, mod_x, plane, scale_8bit, split, vs, normalize_seq
+    join, mod_x, normalize_seq, plane, scale_8bit, split, to_arr, vs
 )
 
 from .f3kdb import F3kdb
@@ -33,6 +33,7 @@ __all__ = [
 ]
 
 FadeLimits = tuple[int | Iterable[int] | None, int | Iterable[int] | None]
+GrainPostProcess = VSFunctionNoArgs | str | list[VSFunctionNoArgs | str]
 
 
 class Grainer(ABC):
@@ -42,7 +43,7 @@ class Grainer(ABC):
         self, strength: float | tuple[float, float] = 0.25,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
@@ -236,7 +237,13 @@ class Grainer(ABC):
             grained = norm_expr([clip, grained], limit_expr, planes, low=low, high=high)
 
         if self.postprocess:
-            grained = self.postprocess(grained)
+            for postprocess in to_arr(self.postprocess):
+                if callable(postprocess):
+                    grained = postprocess(grained)
+                else:
+                    # fuck importing re
+                    uses_y = ' y ' in postprocess or postprocess.startswith('y ') or postprocess.endswith(' y')
+                    grained = norm_expr([grained, clip] if uses_y else grained, postprocess)
 
         neutral = get_neutral_values(clip)
 
@@ -362,7 +369,7 @@ class LinearLightGrainer(Grainer):
         self, strength: float | tuple[float, float],
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, gamma: float = 1.0, matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
@@ -429,7 +436,7 @@ class ChickenDreamBase(LinearLightGrainer):
         self, strength: float | tuple[float, float], draft: bool,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -456,7 +463,7 @@ class ChickenDreamBox(ChickenDreamBase):
         self, strength: float | tuple[float, float] = 0.25,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -475,7 +482,7 @@ class ChickenDreamGauss(ChickenDreamBase):
         self, strength: float | tuple[float, float] = 0.35,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -494,7 +501,7 @@ class FilmGrain(LinearLightGrainer):
         self, strength: float | tuple[float, float] = 0.8,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcess | None = None, protect_chroma: bool = False,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, rad: float = 0.1, iterations: int = 800, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
