@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from functools import reduce
-from typing import Any
+from typing import Any, Iterable
 
 from vsdenoise import Prefilter
-from vsexprtools import norm_expr
-from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, Scaler, ScalerT, LinearLight
+from vsexprtools import complexpr_available, norm_expr
+from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, LinearLight, Scaler, ScalerT
 from vsmasktools import adg_mask
 from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
-    VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y,
-    inject_self, join, mod_x, plane, split, vs
+    VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y, inject_self,
+    join, mod_x, plane, scale_8bit, split, vs
 )
 
 from .f3kdb import F3kdb
@@ -32,6 +32,8 @@ __all__ = [
     'multi_graining', 'MultiGrainerT'
 ]
 
+FadeLimits = tuple[int | Iterable[int] | None, int | Iterable[int] | None]
+
 
 class Grainer(ABC):
     """Abstract graining interface"""
@@ -41,7 +43,7 @@ class Grainer(ABC):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *,
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
     ) -> None:
@@ -54,6 +56,7 @@ class Grainer(ABC):
         self.postprocess = postprocess
         self.protect_chroma = protect_chroma
         self.luma_scaling = luma_scaling
+        self.fade_limits = fade_limits
         self.kwargs = kwargs
 
         if isinstance(sharp, float):
@@ -120,7 +123,6 @@ class Grainer(ABC):
         input_dep = self._is_input_dependent(clip, **kwargs)
 
         def _wrap_implementation(clip: vs.VideoNode, neutral_out: bool) -> vs.VideoNode:
-
             if input_dep and do_taverage and not kwargs.get('unsafe_graining', False):
                 raise CustomValueError(
                     'You can\'t have temporal averaging with input dependent graining as it will create ghosting!'
@@ -192,7 +194,7 @@ class Grainer(ABC):
 
         if (
             self.size == (1.0, 1.0) and not do_taverage and not self.postprocess
-            and not do_protect_chroma and self.luma_scaling is None
+            and not do_protect_chroma and self.luma_scaling is None and not self.fade_limits
         ):
             return _wrap_implementation(clip, self.neutral_out)
 
@@ -218,6 +220,34 @@ class Grainer(ABC):
             grained = grained.std.Merge(average, self.temporal_average)
             grained = grained[self.temporal_radius:-self.temporal_radius]
 
+        if self.fade_limits:
+            ...
+            low, high = (None, None) if self.fade_limits is True else self.fade_limits
+
+            if low is None:
+                low = [scale_8bit(clip, 16), scale_8bit(clip, 16, True)]
+            elif not isinstance(low, Iterable):
+                low = [scale_8bit(clip, low), scale_8bit(clip, low, True)]
+            else:
+                low = [scale_8bit(clip, l, not not i) for i, l in enumerate(low)]
+
+            if high is None:
+                high = [scale_8bit(clip, 235), scale_8bit(clip, 240, True)]
+            elif not isinstance(high, Iterable):
+                high = [scale_8bit(clip, high), scale_8bit(clip, high, True)]
+            else:
+                high = [scale_8bit(clip, h, not not i) for i, h in enumerate(high)]
+
+            if complexpr_available:
+                limit_expr = 'y range_half - abs A! x A@ - {low} < x A@ + {high} > or range_half y ?'
+            else:
+                limit_expr = 'x y range_half - abs - {low} < x y range_half - abs + {high} > or range_half y ?'
+
+            if clip.format.sample_type == vs.FLOAT:
+                limit_expr = [limit_expr, 'x y abs + {high} > x abs y - {low} < or range_half y ?']
+
+            grained = norm_expr([clip, grained], limit_expr, planes, low=low, high=high)
+
         if self.postprocess:
             grained = self.postprocess(grained)
 
@@ -226,8 +256,7 @@ class Grainer(ABC):
         if self.neutral_out:
             merge_clip = grained.std.MakeDiff(grained)[0].std.Loop(grained.num_frames)
         else:
-            merge_clip = clip
-            grained = clip.std.MergeDiff(grained, planes)
+            merge_clip, grained = clip, clip.std.MergeDiff(grained, planes)
 
         if do_protect_chroma:
             neutral_mask = Lanczos.resample(clip, clip.format.replace(subsampling_h=0, subsampling_w=0))
@@ -347,11 +376,12 @@ class LinearLightGrainer(Grainer):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *, gamma: float = 1.0,
-        matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
+        *, gamma: float = 1.0, matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
+        **kwargs: Any
     ) -> None:
         super().__init__(
-            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling, fade_limits,
             matrix=matrix, kernel=kernel, neutral_out=neutral_out, **kwargs
         )
 
@@ -413,12 +443,12 @@ class ChickenDreamBase(LinearLightGrainer):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *,
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
-            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling, fade_limits,
             matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, gamma=gamma, **kwargs
         )
 
@@ -440,12 +470,13 @@ class ChickenDreamBox(ChickenDreamBase):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
+        *, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
             strength, True, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
-            matrix=matrix, kernel=kernel, neutral_out=neutral_out, res=res, dev=dev, gamma=gamma, **kwargs
+            fade_limits, matrix=matrix, kernel=kernel, neutral_out=neutral_out, res=res, dev=dev, gamma=gamma, **kwargs
         )
 
     def _get_inner_kwargs(self, strength: float, **kwargs: Any) -> KwargsT:
@@ -458,12 +489,14 @@ class ChickenDreamGauss(ChickenDreamBase):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *, rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
+        *, rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
             strength, False, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
-            matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev, gamma=gamma, **kwargs
+            fade_limits, matrix=matrix, kernel=kernel, neutral_out=neutral_out, rad=rad, res=res, dev=dev,
+            gamma=gamma, **kwargs
         )
 
 
@@ -475,12 +508,12 @@ class FilmGrain(LinearLightGrainer):
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
         postprocess: VSFunctionNoArgs | None = None, protect_chroma: bool = False,
-        luma_scaling: float | None = None, *,
-        rad: float = 0.1, iterations: int = 800, dev: float = 0.0, gamma: float = 1.0,
+        luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
+        *, rad: float = 0.1, iterations: int = 800, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
     ) -> None:
         super().__init__(
-            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling,
+            strength, size, sharp, dynamic, temporal_average, postprocess, protect_chroma, luma_scaling, fade_limits,
             matrix=matrix, kernel=kernel, neutral_out=neutral_out, gamma=gamma,
             grain_radius_mean=rad, num_iterations=iterations, grain_radius_std=dev, **kwargs
         )
