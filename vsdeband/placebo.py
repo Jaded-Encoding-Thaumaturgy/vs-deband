@@ -74,7 +74,7 @@ class Placebo(Debander):
 
     @inject_self
     def deband(  # type: ignore[override]
-        self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 4.0,
+        self, clip: vs.VideoNode, radius: float = 16.0, thr: float | list[float] = 3.0,
         iterations: int = 4, grain: float | list[float] = 0.0, dither: PlaceboDither = PlaceboDither.DEFAULT
     ) -> vs.VideoNode:
         """
