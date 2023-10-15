@@ -6,10 +6,9 @@ from typing import Any
 
 from vsdenoise import Prefilter
 from vsexprtools import norm_expr
-from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, Scaler, ScalerT
+from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, Scaler, ScalerT, LinearLight
 from vsmasktools import adg_mask
 from vsrgtools import BlurMatrix
-from vsscale import gamma2linear, linear2gamma
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
     Transfer, VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y,
@@ -399,25 +398,11 @@ class LinearLightGrainer(Grainer):
 
         gamma = 1.0 - (self.gamma / 2)
 
-        targ_matrix = self.matrix or Matrix.from_video(clip)
-        transfer = Transfer.from_matrix(targ_matrix)
+        with LinearLight(clip, True, (6.5, gamma), self.kernel) as ll:
+            kwargs = self._get_inner_kwargs(strength, **kwargs)
+            ll.linear = self._perform_linear_graining(ll.linear.std.Limiter(), **kwargs)
 
-        if clip.format.color_family is vs.YUV:
-            input_clip = gamma2linear(
-                self.kernel.resample(clip, vs.RGBS, matrix_in=targ_matrix), transfer, 1, True, gamma
-            )
-        else:
-            input_clip = clip
-
-        kwargs = self._get_inner_kwargs(strength, **kwargs)
-        out_clip = self._perform_linear_graining(input_clip.std.Limiter(), **kwargs)
-
-        if clip.format.color_family is vs.YUV:
-            out_clip = self.kernel.resample(
-                linear2gamma(out_clip, transfer, 1, True, gamma), clip, targ_matrix
-            )
-
-        return out_clip
+        return ll.out
 
 
 class ChickenDreamBase(LinearLightGrainer):
