@@ -11,7 +11,7 @@ from vsmasktools import adg_mask
 from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
-    Transfer, VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y,
+    VSFunctionNoArgs, check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_y,
     inject_self, join, mod_x, plane, split, vs
 )
 
