@@ -121,9 +121,7 @@ class Placebo(Debander):
         set_grn = set(grain)
 
         if set_grn == {0} or clip.format.num_planes == 1:
-            def_grain = grain[0] if clip.format.num_planes == 1 else 0
-
-            debs = [_placebo(p, thr, def_grain, [0]) for p, thr in zip(split(clip), thr)]
+            debs = [_placebo(p, thr, grain[0], [0]) for p, thr in zip(split(clip), thr)]
 
             if len(debs) == 1:
                 return debs[0]
