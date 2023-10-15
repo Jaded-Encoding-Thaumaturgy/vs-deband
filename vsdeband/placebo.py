@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Iterable
 
 from vstools import CustomIntEnum, KwargsT, check_variable, fallback, inject_self, join, normalize_seq, split, vs
 
@@ -111,12 +112,34 @@ class Placebo(Debander):
         grain = normalize_seq(fallback(self.grain, grain))  # type: ignore[arg-type]
         dither = fallback(self.dither, dither)
 
-        debs = [
-            p.placebo.Deband(1, iterations, thr, radius, gra * (1 << 5) * 0.8, **dither.placebo_args)
-            for p, thr, gra in zip(split(clip), thr, grain)
-        ]
+        def _placebo(clip: vs.VideoNode, thr: float, grain: float, planes: Iterable[int]) -> vs.VideoNode:
+            plane = 0
+            for p in planes:
+                plane |= pow(2, p)
+            return clip.placebo.Deband(plane, iterations, thr, radius, grain * (1 << 5) * 0.8, **dither.placebo_args)
 
-        if len(debs) == 1:
-            return debs[0]
+        set_grn = set(grain)
 
-        return join(debs, clip.format.color_family)
+        if set_grn == {0} or clip.format.num_planes == 1:
+            def_grain = grain[0] if clip.format.num_planes == 1 else 0
+
+            debs = [_placebo(p, thr, def_grain, [0]) for p, thr in zip(split(clip), thr)]
+
+            if len(debs) == 1:
+                return debs[0]
+
+            return join(debs, clip.format.color_family)
+
+        plane_map = {
+            tuple(i for i in range(clip.format.num_planes) if grain[i] == x): x for x in set_grn - {0}
+        }
+
+        debanded = clip
+        for planes, grain_val in plane_map.items():
+            if len(set(thr[p] for p in planes)) == 1:
+                debanded = _placebo(debanded, thr[planes[0]], grain_val, planes)
+            else:
+                for p in planes:
+                    debanded = _placebo(debanded, thr[p], grain_val, planes)
+
+        return debanded
