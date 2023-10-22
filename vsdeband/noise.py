@@ -315,7 +315,7 @@ class AddNoiseBase(Grainer):
         if hasattr(self, '_noise_type'):
             kwargs.update(type=self._noise_type)
         elif 'type' not in kwargs:
-            raise ValueError('Type must be specified! Alternatively, you can use a subclass like AddNoise.GAUSS .')
+            raise ValueError('Type must be specified! Alternatively, you can use a subclass like AddNoise.GAUSS.')
 
         return kwargs
 
