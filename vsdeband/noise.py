@@ -31,7 +31,7 @@ __all__ = [
 
     'ChickenDream', 'FilmGrain',
 
-    'multi_graining', 'MultiGrainerT'
+    'multi_graining', 'MultiGrainerT',
     
     'Graigasm'
 ]
