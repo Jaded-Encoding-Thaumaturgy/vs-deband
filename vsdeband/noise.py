@@ -64,7 +64,7 @@ class Grainer(ABC):
         self, strength: float | tuple[float, float] = 0.25,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
@@ -400,7 +400,7 @@ class LinearLightGrainer(Grainer):
         self, strength: float | tuple[float, float],
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, gamma: float = 1.0, matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False,
         **kwargs: Any
@@ -467,7 +467,7 @@ class ChickenDreamBase(LinearLightGrainer):
         self, strength: float | tuple[float, float], draft: bool,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True, *,
         rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -494,7 +494,7 @@ class ChickenDreamBox(ChickenDreamBase):
         self, strength: float | tuple[float, float] = 0.25,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -513,7 +513,7 @@ class ChickenDreamGauss(ChickenDreamBase):
         self, strength: float | tuple[float, float] = 0.35,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, rad: float = 0.25, res: int = 1024, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
@@ -532,7 +532,7 @@ class FilmGrain(LinearLightGrainer):
         self, strength: float | tuple[float, float] = 0.8,
         size: float | tuple[float, float] = (1.0, 1.0), sharp: float | ScalerT = Lanczos,
         dynamic: bool = True, temporal_average: int | tuple[float, int] = (0.0, 1),
-        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = False,
+        postprocess: GrainPostProcessesT | None = None, protect_chroma: bool = True,
         luma_scaling: float | None = None, fade_limits: bool | FadeLimits = True,
         *, rad: float = 0.1, iterations: int = 800, dev: float = 0.0, gamma: float = 1.0,
         matrix: MatrixT | None = None, kernel: KernelT = Catrom, neutral_out: bool = False, **kwargs: Any
