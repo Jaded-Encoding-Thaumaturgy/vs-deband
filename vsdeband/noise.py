@@ -345,6 +345,8 @@ class AddNoiseBase(Grainer):
             scale = ((1 << (clip.format.bits_per_sample - 8)) - 1) if clip.format.bits_per_sample > 8 else 255
             strength = (((1.0 - stre) * scale) if stre else 0.0 for stre in strength)
 
+        kwargs.setdefault('ysize', kwargs.get('xsize', 2.0))
+
         return core.noise.Add(clip, *strength, constant=not dynamic, **kwargs)
 
 
