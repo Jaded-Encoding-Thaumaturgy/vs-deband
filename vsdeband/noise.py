@@ -618,7 +618,7 @@ def multi_graining(
         ) for _, thr, weight in norm_grainers
     ]
 
-    masks = [norm_expr(diffs, 'x y -') for diffs in zip(masks[:-1], masks[1:])]
+    masks = [norm_expr(diffs, 'y x -') for diffs in zip(masks[:-1], masks[1:])]
 
     if clip.format.num_planes == 3:
         masks = [Bilinear.resample(join(mask, mask, mask), clip) for mask in masks]
