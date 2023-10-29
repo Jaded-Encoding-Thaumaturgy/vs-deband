@@ -5,4 +5,4 @@ pycodestyle==2.10.0
 pyflakes==3.0.1
 typed-ast==1.5.4
 typing-extensions==4.4.0
-VapourSynth>=59
+VapourSynth>=65
