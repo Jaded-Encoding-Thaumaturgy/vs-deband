@@ -1,6 +1,6 @@
 # vs-deband, a collection of wrappers and functions for debanding
 
-For further support, drop by `#vsdeband` in the [IEW Discord server](https://discord.gg/qxTxVJGtst).
+For support you can find me in my [Discord server](https://discord.gg/setsugen), @setsugen_no_ao. <br><br>
 
 ## How to install
 
@@ -13,6 +13,7 @@ pip install vsdeband
 Or if you want the latest git version, install it with this command:
 
 ```sh
-pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-deband.git
+pip install git+https://github.com/Setsugennoao/vs-deband.git
 ```
+
 <br>
