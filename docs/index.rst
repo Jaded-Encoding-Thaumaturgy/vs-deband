@@ -10,14 +10,14 @@ vsdeband Documentation
 .. image:: https://img.shields.io/pypi/v/vsdeband
     :target: https://pypi.org/project/vsdeband/
 
-.. image:: https://img.shields.io/github/commits-since/Setsugennoao/vs-deband/latest
-    :target: https://github.com/Irrational-Encoding-Wizardry/vs-deband/commits/master
+.. image:: https://img.shields.io/github/commits-since/Jaded-Encoding-Thaumaturgy/vs-deband/latest
+    :target: https://github.com/Jaded-Encoding-Thaumaturgy/vs-deband/commits/master
 
 .. image:: https://img.shields.io/pypi/l/vsdeband
-    :target: https://github.com/Irrational-Encoding-Wizardry/vs-deband/blob/master/LICENSE
+    :target: https://github.com/Jaded-Encoding-Thaumaturgy/vs-deband/blob/master/LICENSE
 
 .. image:: https://img.shields.io/discord/856381934052704266?label=discord
-    :target: https://discord.gg/qxTxVJGtst
+    :target: https://discord.gg/XTpc6Fa9eB
 
 .. image:: https://static.pepy.tech/personalized-badge/vsdeband?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads
     :target: https://pepy.tech/project/vsdeband
@@ -56,7 +56,7 @@ Check out the `how to contribute <contribute>` section!
 Special Credits
 ---------------
 | A special thanks to every contributor who has contributed to vsdeband.
-| `A comprehensive list of contributors can be found here. <https://github.com/Irrational-Encoding-Wizardry/vs-deband/graphs/contributors>`_
+| `A comprehensive list of contributors can be found here. <https://github.com/Jaded-Encoding-Thaumaturgy/vs-deband/graphs/contributors>`_
 
 
 .. toctree::
