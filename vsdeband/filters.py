@@ -31,7 +31,7 @@ def guided_filter(
     downscaler = Scaler.ensure_obj(downscaler, guided_filter)
     upscaler = Scaler.ensure_obj(upscaler, guided_filter)
 
-    range_in = ColorRange.from_param(range_in, guided_filter) or ColorRange.from_video(clip)
+    range_in = ColorRange.from_param_or_video(range_in, clip, False, guided_filter)
 
     width, height = clip.width, clip.height
 

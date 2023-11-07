@@ -166,7 +166,7 @@ def guided_deband(
 
     planes = normalize_planes(clip, planes)
 
-    range_in = ColorRange.from_param(range_in) or ColorRange.from_video(clip)
+    range_in = ColorRange.from_param_or_video(range_in, clip)
 
     rad = fallback(rad, ceil(clip.height / 540))
 
