@@ -61,6 +61,19 @@ class GrainPP(_gpp):
     def Bump(cls, strength: float = 0.1) -> GrainPP:
         return cls('x[-1,1] x - {strength} * x +', KwargsT(strength=strength + 1.0))
 
+    @classmethod
+    def NormBrightness(cls) -> ResolverTwoClipsArgs:
+        def _resolve(grained: vs.VideoNode) -> vs.VideoNode:
+            for i in range(grained.format.num_planes):
+                grained = grained.std.PlaneStats(plane=i, prop=f'PS{i}')
+
+            if get_sample_type(grained) is vs.FLOAT:
+                return norm_expr(grained, 'x x.PS{plane_idx}Average -')
+
+            return norm_expr(grained, 'x range_diff range_size / x.PS{plane_idx}Average - range_size * +')
+
+        return _resolve
+
 
 FadeLimits = tuple[int | Iterable[int] | None, int | Iterable[int] | None]
 GrainPostProcessT = ResolverOneClipArgs | ResolverTwoClipsArgs | str | GrainPP | GrainPP.Resolver
