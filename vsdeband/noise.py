@@ -13,7 +13,7 @@ from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
     check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self,
-    join, mod_x, normalize_seq, plane, scale_8bit, split, to_arr, vs
+    join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
 )
 
 from .f3kdb import F3kdb
@@ -268,15 +268,27 @@ class Grainer(ABC):
         if self.fade_limits:
             low, high = (None, None) if self.fade_limits is True else self.fade_limits
 
-            low = [scale_8bit(clip, l, not not i) for i, l in enumerate(normalize_seq(fallback(low, 16)))]
-            high = [scale_8bit(clip, h, not not i) for i, h in enumerate(normalize_seq(fallback(high, [235, 240])))]
+            low = [
+                scale_value(
+                    l, 8, clip.format.bits_per_sample,
+                    scale_offsets=(clip.format.sample_type is vs.FLOAT),
+                    chroma=not not i
+                )
+                for i, l in enumerate(normalize_seq(fallback(low, 16)))
+            ]
+            high = [
+                scale_value(
+                    l, 8, clip.format.bits_per_sample,
+                    scale_offsets=(clip.format.sample_type is vs.FLOAT),
+                    chroma=not not i
+                )
+                for i, l in enumerate(normalize_seq(fallback(high, [235, 240])))
+            ]
 
-            if clip.format.sample_type is vs.FLOAT:
-                limit_expr = 'x y abs - {low} < x y abs + {high} > or range_diff y ?'
-            elif complexpr_available:
-                limit_expr = 'y range_diff - abs A! x A@ - {low} < x A@ + {high} > or range_diff y ?'
+            if complexpr_available:
+                limit_expr = 'y range_half - abs A! x A@ - {low} < x A@ + {high} > or range_half y ?'
             else:
-                limit_expr = 'x y range_diff - abs - {low} < x y range_diff - abs + {high} > or range_diff y ?'
+                limit_expr = 'x y range_half - abs - {low} < x y range_half - abs + {high} > or range_half y ?'
 
             grained = norm_expr([clip, grained], limit_expr, planes, low=low, high=high)
 
@@ -305,6 +317,8 @@ class Grainer(ABC):
         if self.neutral_out:
             merge_clip = grained.std.MakeDiff(grained)[0].std.Loop(grained.num_frames)
         else:
+            if clip.format.sample_type == vs.FLOAT:
+                grained = norm_expr(grained, ('x 0.5 -', ''), planes)
             merge_clip, grained = clip, clip.std.MergeDiff(grained, planes)
 
         if do_protect_chroma:
