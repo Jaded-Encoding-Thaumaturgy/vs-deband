@@ -174,7 +174,7 @@ def guided_deband(
         if clip.format.sample_type is vs.FLOAT:
             bin_thr = 1.5 / 255 if range_in.is_full else [1.5 / 219, 1.5 / 224]
         else:
-            bin_thr = scale_value(0.005859375, 32, clip, range_in)
+            bin_thr = scale_value(0.005859375, 32, clip, range_out=range_in)
 
     bin_thr = normalize_seq(bin_thr, clip.format.num_planes)
 
