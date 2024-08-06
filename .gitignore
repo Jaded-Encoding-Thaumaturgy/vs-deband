@@ -1,6 +1,5 @@
 *ffindex
-.vspreview
-.vspyplugin
+.vsjet
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
