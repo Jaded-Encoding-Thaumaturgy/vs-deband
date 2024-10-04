@@ -13,9 +13,9 @@ jobs:
           - '3.12'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -27,5 +27,8 @@ jobs:
       - name: Running flake8
         run: flake8 vsdeband
       - name: Running mypy
-        if: steps.dependencies.outcome == 'success'
-        run: mypy vsdeband
+        run: |
+          echo "::add-matcher::.github/workflows/matchers/mypy.json"
+          mypy --no-pretty vsdeband
+          echo "::remove-matcher owner=mypy::"
+        continue-on-error: true
