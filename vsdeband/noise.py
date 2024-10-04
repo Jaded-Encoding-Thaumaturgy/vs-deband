@@ -11,7 +11,7 @@ from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, L
 from vsmasktools import adg_mask
 from vsrgtools import BlurMatrix
 from vstools import (
-    CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT,
+    CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
     check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self,
     join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
 )
@@ -76,7 +76,7 @@ class GrainPP(_gpp):
 
 
 FadeLimits = tuple[int | Iterable[int] | None, int | Iterable[int] | None]
-GrainPostProcessT = ResolverOneClipArgs | ResolverTwoClipsArgs | str | GrainPP | GrainPP.Resolver
+GrainPostProcessT = type[ResolverOneClipArgs | ResolverTwoClipsArgs | str | GrainPP | GrainPP.Resolver]
 GrainPostProcessesT = GrainPostProcessT | list[GrainPostProcessT]
 
 
@@ -153,7 +153,7 @@ class Grainer(ABC):
             return clip
 
         if strength[0] <= 0.0 and strength[1] > 0.0:
-            planes = [1, 2]
+            planes: PlanesT = [1, 2]
         elif strength[0] > 0.0 and strength[1] <= 0.0:
             planes = 0
         else:
@@ -360,7 +360,7 @@ class AddNoiseBase(Grainer):
         return kwargs
 
     def _is_poisson(self, **kwargs: Any) -> bool:
-        return kwargs.get('type', None) == 4
+        return kwargs.get('type') == 4
 
     def _is_input_dependent(self, clip: vs.VideoNode, **kwargs: Any) -> bool:
         return self._is_poisson(**kwargs)
