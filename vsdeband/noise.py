@@ -9,7 +9,6 @@ from vsdenoise import Prefilter
 from vsexprtools import complexpr_available, norm_expr
 from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, LinearLight, Scaler, ScalerT
 from vsmasktools import adg_mask
-from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
     check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self,
@@ -224,14 +223,6 @@ class Grainer(ABC):
 
             grained = _try_grain(base_clip)
 
-            if clip.num_frames != grained.num_frames:
-                if grained.num_frames == 1:
-                    grained = grained.std.Loop(clip.num_frames)
-                elif grained.num_frames > clip.num_frames:
-                    grained = grained[:clip.num_frames]
-                else:
-                    grained = grained + grained[-1].std.Loop(clip.num_frames - grained.num_frames)
-
             if input_dep and neutral_out:
                 grained = clip.std.MakeDiff(grained)
 
@@ -261,7 +252,7 @@ class Grainer(ABC):
             grained = _wrap_implementation(clip, True)
 
         if do_taverage:
-            average = grained.std.AverageFrames(BlurMatrix.GAUSS.from_radius(self.temporal_radius))
+            average = grained.std.AverageFrames([1] * (self.temporal_radius * 2 + 1))
             grained = grained.std.Merge(average, self.temporal_average)
             grained = grained[self.temporal_radius:-self.temporal_radius]
 
