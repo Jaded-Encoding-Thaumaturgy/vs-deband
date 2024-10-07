@@ -9,7 +9,6 @@ from vsdenoise import Prefilter
 from vsexprtools import complexpr_available, norm_expr
 from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, LinearLight, Scaler, ScalerT
 from vsmasktools import adg_mask
-from vsrgtools import BlurMatrix
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
     check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self,
