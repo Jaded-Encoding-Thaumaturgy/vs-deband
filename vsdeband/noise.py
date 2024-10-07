@@ -223,14 +223,6 @@ class Grainer(ABC):
 
             grained = _try_grain(base_clip)
 
-            if clip.num_frames != grained.num_frames:
-                if grained.num_frames == 1:
-                    grained = grained.std.Loop(clip.num_frames)
-                elif grained.num_frames > clip.num_frames:
-                    grained = grained[:clip.num_frames]
-                else:
-                    grained = grained + grained[-1].std.Loop(clip.num_frames - grained.num_frames)
-
             if input_dep and neutral_out:
                 grained = clip.std.MakeDiff(grained)
 
