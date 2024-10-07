@@ -261,7 +261,7 @@ class Grainer(ABC):
             grained = _wrap_implementation(clip, True)
 
         if do_taverage:
-            average = grained.std.AverageFrames(BlurMatrix.GAUSS.from_radius(self.temporal_radius))
+            average = grained.std.AverageFrames([1] * (self.temporal_radius * 2 + 1))
             grained = grained.std.Merge(average, self.temporal_average)
             grained = grained[self.temporal_radius:-self.temporal_radius]
 
