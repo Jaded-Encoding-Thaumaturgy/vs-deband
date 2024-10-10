@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Protocol, TypeAlias, cast
+from typing import Any, Callable, Iterable, Protocol, cast
 
 from vsdenoise import Prefilter
 from vsexprtools import complexpr_available, norm_expr
@@ -33,14 +33,6 @@ __all__ = [
 ]
 
 
-class _gpp:
-    if TYPE_CHECKING:
-        from .noise import GrainPP
-        Resolver: TypeAlias = Callable[[vs.VideoNode], GrainPP]
-    else:
-        Resolver: TypeAlias = Callable[[vs.VideoNode], Any]
-
-
 class ResolverOneClipArgs(Protocol):
     def __call__(self, grained: vs.VideoNode) -> vs.VideoNode:
         ...
@@ -52,7 +44,9 @@ class ResolverTwoClipsArgs(Protocol):
 
 
 @dataclass
-class GrainPP(_gpp):
+class GrainPP:
+    Resolver = Callable[[vs.VideoNode], 'GrainPP']
+
     value: str
     kwargs: KwargsT = field(default_factory=lambda: KwargsT())
 
@@ -75,7 +69,7 @@ class GrainPP(_gpp):
 
 
 FadeLimits = tuple[int | Iterable[int] | None, int | Iterable[int] | None]
-GrainPostProcessT = type[ResolverOneClipArgs | ResolverTwoClipsArgs | str | GrainPP | GrainPP.Resolver]
+GrainPostProcessT = ResolverOneClipArgs | ResolverTwoClipsArgs | str | GrainPP | GrainPP.Resolver
 GrainPostProcessesT = GrainPostProcessT | list[GrainPostProcessT]
 
 
