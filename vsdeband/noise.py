@@ -261,19 +261,20 @@ class Grainer(ABC):
 
             low = [
                 scale_value(
-                    l, 8, clip.format.bits_per_sample,
+                    threshold, 8, clip.format.bits_per_sample,
                     scale_offsets=(clip.format.sample_type is vs.FLOAT),
-                    chroma=not not i
+                    chroma=not not plane_index
                 )
-                for i, l in enumerate(normalize_seq(fallback(low, 16)))
+                for plane_index, threshold in enumerate(normalize_seq(fallback(low, 16)))
             ]
+
             high = [
                 scale_value(
-                    l, 8, clip.format.bits_per_sample,
+                    threshold, 8, clip.format.bits_per_sample,
                     scale_offsets=(clip.format.sample_type is vs.FLOAT),
-                    chroma=not not i
+                    chroma=not not plane_index
                 )
-                for i, l in enumerate(normalize_seq(fallback(high, [235, 240])))
+                for plane_index, threshold in enumerate(normalize_seq(fallback(high, [235, 240])))
             ]
 
             if complexpr_available:
