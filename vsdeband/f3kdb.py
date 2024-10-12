@@ -127,7 +127,7 @@ class F3kdb(Debander):
         planes: PlanesT = None,
         _func: FuncExceptT | None = None
     ) -> vs.VideoNode:
-        func = FunctionUtil(clip, _func or self.deband, planes, (vs.GRAY, vs.YUV), range(8, 16))
+        func = FunctionUtil(clip, _func or self.deband, planes, (vs.GRAY, vs.YUV), (8, 16))
 
         if not hasattr(core, 'neo_f3kdb'):
             raise CustomRuntimeError('You are missing the neo_f3kdb plugin!', func.func)
