@@ -262,7 +262,6 @@ class Grainer(ABC):
             low = [
                 scale_value(
                     threshold, 8, clip.format.bits_per_sample,
-                    scale_offsets=(clip.format.sample_type is vs.FLOAT),
                     chroma=not not plane_index
                 )
                 for plane_index, threshold in enumerate(normalize_seq(fallback(low, 16)))
@@ -271,7 +270,6 @@ class Grainer(ABC):
             high = [
                 scale_value(
                     threshold, 8, clip.format.bits_per_sample,
-                    scale_offsets=(clip.format.sample_type is vs.FLOAT),
                     chroma=not not plane_index
                 )
                 for plane_index, threshold in enumerate(normalize_seq(fallback(high, [235, 240])))
