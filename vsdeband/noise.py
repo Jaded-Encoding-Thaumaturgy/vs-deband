@@ -11,8 +11,8 @@ from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, L
 from vsmasktools import adg_mask
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
-    check_variable, core, depth, fallback, get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self,
-    join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
+    check_variable, core, depth, fallback, get_neutral_value, get_neutral_values, get_peak_value, get_sample_type,
+    inject_self, get_y, join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
 )
 
 from .f3kdb import F3kdb
@@ -302,7 +302,7 @@ class Grainer(ABC):
                     uses_y = ' y ' in postprocess or postprocess.startswith('y ') or postprocess.endswith(' y')
                     grained = norm_expr([grained, clip] if uses_y else grained, postprocess, **ppkwargs)
 
-        neutral = get_neutral_values(clip)
+        neutral = get_neutral_value(clip)
 
         if self.neutral_out:
             merge_clip = grained.std.MakeDiff(grained)[0].std.Loop(grained.num_frames)
@@ -315,7 +315,7 @@ class Grainer(ABC):
             neutral_mask = Lanczos.resample(clip, clip.format.replace(subsampling_h=0, subsampling_w=0))
 
             neutral_mask = norm_expr(
-                split(neutral_mask), f'y {neutral[1]} = z {neutral[1]} = and {get_peak_value(clip, chroma=True)} 0 ?',
+                split(neutral_mask), f'y {neutral} = z {neutral} = and {get_peak_value(clip, chroma=True)} 0 ?',
                 planes=[1, 2]
             )
 
