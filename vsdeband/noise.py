@@ -301,8 +301,6 @@ class Grainer(ABC):
         if self.neutral_out:
             merge_clip = grained.std.MakeDiff(grained)[0].std.Loop(grained.num_frames)
         else:
-            if clip.format.sample_type == vs.FLOAT:
-                grained = norm_expr(grained, ('x 0.5 -', ''), planes)
             merge_clip, grained = clip, clip.std.MergeDiff(grained, planes)
 
         if do_protect_chroma:
