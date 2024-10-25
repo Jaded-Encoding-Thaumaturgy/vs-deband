@@ -12,7 +12,7 @@ from vsmasktools import adg_mask
 from vstools import (
     CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
     check_variable, core, depth, fallback, get_neutral_value, get_neutral_values, get_peak_value, get_sample_type,
-    inject_self, get_y, join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
+    ColorRange, inject_self, get_y, join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
 )
 
 from .f3kdb import F3kdb
@@ -307,8 +307,7 @@ class Grainer(ABC):
             neutral_mask = Lanczos.resample(clip, clip.format.replace(subsampling_h=0, subsampling_w=0))
 
             neutral_mask = norm_expr(
-                split(neutral_mask), f'y {neutral} = z {neutral} = and {get_peak_value(clip, chroma=True)} 0 ?',
-                planes=[1, 2]
+                split(neutral_mask), f'y {neutral} = z {neutral} = and {get_peak_value(clip, range_in=ColorRange.FULL)} 0 ?'
             )
 
             grained = grained.std.MaskedMerge(merge_clip, neutral_mask, [1, 2])
