@@ -270,9 +270,9 @@ class Grainer(ABC):
             ]
 
             if complexpr_available:
-                limit_expr = 'y range_half - abs A! x A@ - {low} < x A@ + {high} > or range_half y ?'
+                limit_expr = 'y neutral - abs A! x A@ - {low} < x A@ + {high} > or neutral y ?'
             else:
-                limit_expr = 'x y range_half - abs - {low} < x y range_half - abs + {high} > or range_half y ?'
+                limit_expr = 'x y neutral - abs - {low} < x y neutral - abs + {high} > or neutral y ?'
 
             grained = norm_expr([clip, grained], limit_expr, planes, low=low, high=high)
 
