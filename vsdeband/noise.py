@@ -63,7 +63,7 @@ class GrainPP:
             if get_sample_type(grained) is vs.FLOAT:
                 return norm_expr(grained, 'x x.PS{plane_idx}Average -')
 
-            return norm_expr(grained, 'x range_diff range_size / x.PS{plane_idx}Average - range_size * +')
+            return norm_expr(grained, 'x neutral range_size / x.PS{plane_idx}Average - range_size * +')
 
         return _resolve
 
