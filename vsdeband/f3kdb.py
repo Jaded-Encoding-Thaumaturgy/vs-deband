@@ -157,8 +157,8 @@ class F3kdb(Debander):
         y1 = cb1 = cr1 = y2 = cb2 = cr2 = None
 
         if isinstance(sample_mode, SampleModeMidDiffInfo):
-            y1, cb1, cr1 = func.norm_seq(sample_mode.thr_mid)
-            y2, cb2, cr2 = func.norm_seq(sample_mode.thr_max)
+            y1, cb1, cr1 = func.norm_seq(sample_mode.thr_max)
+            y2, cb2, cr2 = func.norm_seq(sample_mode.thr_mid)
             sample_mode = sample_mode.sample_mode
 
         blur_first = fallback(self.blur_first or blur_first, max(y, cb, cr) < 2048)  # type: ignore
