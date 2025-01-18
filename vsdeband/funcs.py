@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from math import ceil
 from typing import Any
 
