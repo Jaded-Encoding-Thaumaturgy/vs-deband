@@ -1,79 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import Any, Literal, NamedTuple, NoReturn, Self, Union, overload
 
-from vstools import (ColorRange, ColorRangeT, CustomIntEnum, CustomRuntimeError, FuncExceptT,
-                     FunctionUtil, PlanesT, core, fallback, inject_self, normalize_seq, vs)
+from vstools import (
+    ColorRange, ColorRangeT, CustomIntEnum, CustomRuntimeError, FuncExceptT, FunctionUtil, PlanesT,
+    core, fallback, inject_self, normalize_seq, vs
+)
 
 from .abstract import Debander
 
 __all__ = [
     'SampleMode',
-
+    'RandomAlgo',
     'F3kdb'
 ]
 
 
-if TYPE_CHECKING:
-    class Algorithm(CustomIntEnum):
-        OLD = 0
-        UNIFORM = 1
-        GAUSSIAN = 2
-
-        @overload
-        def __call__(  # type: ignore
-            self: Literal[GAUSSIAN], sigma: float = 1.0, grain_sigma: float = 1.0
-        ) -> SampleModeAlgorithmWithInfo:
-            ...
-
-        @overload
-        def __call__(self) -> SampleModeAlgorithmWithInfo:
-            ...
-
-        def __call__(self, *args: Any) -> Any:  # type: ignore
-            ...
-
-
-def _create_Algorithm(sample_mode: SampleMode | SampleModeMidDiffInfo) -> type[Algorithm]:
-    class inner_algorithm(CustomIntEnum):
-        OLD = 0
-        UNIFORM = 1
-        GAUSSIAN = 2
-
-        def __call__(  # type: ignore
-            self: Literal[GAUSSIAN], sigma: float = 1.0, grain_sigma: float = 1.0
-        ) -> SampleModeAlgorithmWithInfo:
-            return SampleModeAlgorithmWithInfo(self, sample_mode, sigma, grain_sigma)  # type: ignore
-
-    return inner_algorithm  # type: ignore
-
-
-class SampleModeBase:
-    if TYPE_CHECKING:
-        Algorithm: type[Algorithm]
-    else:
-        @property
-        def Algorithm(self) -> type[Algorithm]:
-            return _create_Algorithm(self)
-
-
-@dataclass
-class SampleModeMidDiffInfo(SampleModeBase):
-    sample_mode: SampleMode
-    thr_mid: int | list[int]
-    thr_max: int | list[int]
-
-
-@dataclass
-class SampleModeAlgorithmWithInfo:
-    algo: Algorithm
-    sample_mode: SampleMode | SampleModeMidDiffInfo
-    sigma: float = 1.0
-    grain_sigma: float = 1.0
-
-
-class SampleMode(SampleModeBase, CustomIntEnum):
+class SampleMode(CustomIntEnum):
     COLUMN = 1
     """Take 2 pixels as reference pixel. Reference pixels are in the same column of current pixel."""
 
@@ -89,13 +33,78 @@ class SampleMode(SampleModeBase, CustomIntEnum):
     MEAN_DIFF = 5
     """Similar to COL_ROW_MEAN, adds max/mid diff thresholds."""
 
+    @overload
     def __call__(  # type: ignore
-        self: Literal[MEAN_DIFF], thr_mid: int | list[int], thr_max: int | list[int]
+        self: Union[
+            Literal[SampleMode.COLUMN],
+            Literal[SampleMode.SQUARE],
+            Literal[SampleMode.ROW],
+            Literal[SampleMode.COL_ROW_MEAN],
+        ]
+    ) -> NoReturn:
+        ...
+
+    @overload
+    def __call__(  # type: ignore
+        self: Literal[SampleMode.MEAN_DIFF], thr_mid: int | list[int], thr_max: int | list[int], /,
     ) -> SampleModeMidDiffInfo:
-        return SampleModeMidDiffInfo(self, thr_mid, thr_max)
+        ...
+
+    def __call__(self, *args: Any) -> Any:
+        if self != SampleMode.MEAN_DIFF:
+            raise TypeError
+
+        return SampleModeMidDiffInfo(self, *args)
 
 
-SampleModeT = SampleMode | SampleModeMidDiffInfo | SampleModeAlgorithmWithInfo
+class SampleModeMidDiffInfo(NamedTuple):
+    sample_mode: SampleMode
+    thr_mid: int | list[int]
+    thr_max: int | list[int]
+
+
+class RandomAlgo(CustomIntEnum):
+    """Random number algorithm for reference positions / grains."""
+
+    OLD = 0
+    """Algorithm in old versions"""
+
+    UNIFORM = 1
+    """Uniform distribution"""
+
+    GAUSSIAN = 2
+    """Gaussian distribution"""
+
+    @overload
+    def __call__(self: Literal[RandomAlgo.OLD] | Literal[RandomAlgo.UNIFORM]) -> NoReturn:  # type: ignore
+        ...
+
+    @overload
+    def __call__(self: Literal[RandomAlgo.GAUSSIAN], sigma: float, /,) -> RandomAlgoWithInfo:  # type: ignore
+        """
+        StdDev (sigma).
+        Only values in [-1.0, 1.0] is used for multiplication, numbers outside this range are simply ignored)
+        """
+        ...
+
+    def __call__(self, *args: Any) -> Any:
+        if self != RandomAlgo.GAUSSIAN:
+            return TypeError
+
+        return RandomAlgoWithInfo(self, *args)
+
+
+class RandomAlgoWithInfo(int):
+    sigma: float
+
+    def __new__(cls, x: int, sigma: float) -> Self:
+        instance = super().__new__(cls, x)
+        instance.sigma = sigma
+
+        return instance
+
+
+RandomAlgoT = RandomAlgo | RandomAlgoWithInfo
 
 
 @dataclass
@@ -106,7 +115,7 @@ class F3kdb(Debander):
     thr: int | list[int] | None = None
     grain: int | list[int] | None = None
 
-    sample_mode: SampleModeT | None = None
+    sample_mode: SampleMode | SampleModeMidDiffInfo | None = None
 
     seed: int | None = None
     dynamic_grain: int | None = None
@@ -119,14 +128,32 @@ class F3kdb(Debander):
         radius: int = 16,
         thr: int | list[int] = 96,
         grain: float | list[float] = 0.0,
-        sample_mode: SampleModeT = SampleMode.SQUARE,
-        dynamic_grain: int | None = None,
+        sample_mode: SampleMode | SampleModeMidDiffInfo = SampleMode.SQUARE,
+        dynamic_grain: bool = False,
         blur_first: bool | None = None,
         color_range: ColorRangeT | None = None,
         seed: int | None = None,
+        random: RandomAlgoT | tuple[RandomAlgoT, RandomAlgoT] = RandomAlgo.UNIFORM,
         planes: PlanesT = None,
         _func: FuncExceptT | None = None
     ) -> vs.VideoNode:
+        """
+        :param clip:            Input clip.
+        :param radius:          Banding detection range.
+        :param thr:             Banding detection threshold for respective plane.
+                                If difference between current pixel and reference pixel is less than threshold,
+                                it will be considered as banded
+        :param grain:           Specifies amount of grains added in the last debanding stage.
+        :param sample_mode:     Determines how pixels are taken as reference.
+        :param dynamic_grain:   Use different grain pattern for each frame.
+        :param blur_first:      If True current pixel is compared with average value of all pixels.
+                                If False current pixel is compared with all pixels. 
+                                The pixel is considered as banded pixel only if all differences are less than threshold.
+        :param color_range:     If color_range is limited, all processed pixels will be clamped to TV range.
+        :param seed:            Seed for random number generation
+        :param random:          Random number algorithm for reference positions / grains.
+        :param planes:          Which planes to process.
+        """
         func = FunctionUtil(clip, _func or self.deband, planes, (vs.GRAY, vs.YUV), (8, 16))
 
         if not hasattr(core, 'neo_f3kdb'):
@@ -146,13 +173,21 @@ class F3kdb(Debander):
             color_range, self.deband
         ) or ColorRange.from_video(func.work_clip, func=func.func)
 
-        random_algo_ref = 1
-        random_param_ref = random_param_grain = 1.0
+        random_ref, random_grain = normalize_seq(random, 2)
 
-        if isinstance(sample_mode, SampleModeAlgorithmWithInfo):
-            random_param_ref, random_param_grain = sample_mode.sigma, sample_mode.grain_sigma
-            random_algo_ref = sample_mode.algo.value
-            sample_mode = sample_mode.sample_mode
+        if isinstance(random_ref, RandomAlgoWithInfo):
+            random_algo_ref = int(random_ref)
+            random_param_ref = random_ref.sigma
+        else:
+            random_algo_ref = int(random_ref)
+            random_param_ref = 1.0
+
+        if isinstance(random_grain, RandomAlgoWithInfo):
+            random_algo_grain = int(random_grain)
+            random_param_grain = random_grain.sigma
+        else:
+            random_algo_grain = int(random_grain)
+            random_param_grain = 1.0
 
         y1 = cb1 = cr1 = y2 = cb2 = cr2 = None
 
@@ -166,7 +201,7 @@ class F3kdb(Debander):
         debanded = core.neo_f3kdb.Deband(
             func.work_clip, radius, y, cb, cr, gry * 255 * 0.8, grc * 255 * 0.8,  # type: ignore
             sample_mode.value, self.seed or seed, blur_first, self.dynamic_grain or dynamic_grain,
-            None, None, None, color_range.is_limited, 16, random_algo_ref, random_algo_ref,
+            None, None, None, color_range.is_limited, 16, random_algo_ref, random_algo_grain,
             random_param_ref, random_param_grain, None, y1, cb1, cr1, y2, cb2, cr2, True
         )
 
