@@ -103,7 +103,7 @@ def pfdeband(
     thr: float | list[float] = 120,
     lthr: int | tuple[int, int] = (76, 0), elast: float = 2.5,
     bright_thr: int | None = None, scaler: ScalerT = Spline64,
-    prefilter: Prefilter | VSFunction = partial(Prefilter.SCALEDBLUR, scale=1, radius=2),
+    prefilter: Prefilter | VSFunction = Prefilter.SCALEDBLUR(scale=1, radius=2),
     debander: type[Debander] | Debander = F3kdb, **kwargs: Any
 ) -> vs.VideoNode:
     """

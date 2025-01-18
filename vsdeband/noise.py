@@ -55,8 +55,10 @@ class GrainPP:
         return cls('x[-1,1] x - {strength} * x +', KwargsT(strength=strength + 1.0))
 
     @classmethod
-    def NormBrightness(cls) -> ResolverTwoClipsArgs:
+    def NormBrightness(cls) -> ResolverOneClipArgs:
         def _resolve(grained: vs.VideoNode) -> vs.VideoNode:
+            assert grained.format
+
             for i in range(grained.format.num_planes):
                 grained = grained.std.PlaneStats(plane=i, prop=f'PS{i}')
 
@@ -97,8 +99,8 @@ class Grainer(ABC):
         self.fade_limits = fade_limits
         self.kwargs = kwargs
 
-        if isinstance(sharp, float):
-            self.scaler = BicubicAuto(sharp)
+        if isinstance(sharp, (float, int)):
+            self.scaler: Scaler = BicubicAuto(sharp)
         else:
             self.scaler = Scaler.ensure_obj(sharp, self.__class__)
 
@@ -132,6 +134,8 @@ class Grainer(ABC):
         self, clip: vs.VideoNode, strength: float | tuple[float, float] | None = None,
         dynamic: bool | None = None, **kwargs: Any
     ) -> vs.VideoNode:
+        assert clip.format
+
         kwargs = self._get_kw(kwargs)
 
         if strength is None:
@@ -293,7 +297,7 @@ class Grainer(ABC):
                         ppkwargs = KwargsT()
 
                     # fuck importing re
-                    uses_y = ' y ' in postprocess or postprocess.startswith('y ') or postprocess.endswith(' y')
+                    uses_y = ' y ' in postprocess or postprocess.startswith('y ') or postprocess.endswith(' y')  #type: ignore
                     grained = norm_expr([grained, clip] if uses_y else grained, postprocess, **ppkwargs)
 
         neutral = get_neutral_value(clip)
@@ -353,6 +357,8 @@ class AddNoiseBase(Grainer):
             if not dynamic:
                 raise NotImplementedError('dynamic-only')
 
+            assert clip.format
+
             if clip.format.bits_per_sample > 16:
                 raise NotImplementedError('bad-depth-16')
 
@@ -363,6 +369,8 @@ class AddNoiseBase(Grainer):
         self, clip: vs.VideoNode, strength: tuple[float, float], dynamic: bool = True, **kwargs: Any
     ) -> vs.VideoNode:
         if self._is_poisson(**kwargs):
+            assert clip.format
+
             scale = ((1 << (clip.format.bits_per_sample - 8)) - 1) if clip.format.bits_per_sample > 8 else 255
             strength = (((1.0 - stre) * scale) if stre else 0.0 for stre in strength)
 
@@ -462,6 +470,7 @@ class LinearLightGrainer(Grainer):
     ) -> vs.VideoNode:
         if isinstance(strength, tuple):
             if strength[0] != strength[1]:
+                assert clip.format
                 if clip.format.color_family is vs.YUV:
                     return join(
                         self._perform_graining(get_y(clip), strength[0]) if strength[0] else get_y(clip),
@@ -650,7 +659,7 @@ def multi_graining(
         clip.std.MaskedMerge(grained, mask) for grained, mask in zip(graineds, masks)
     ]
 
-    return reduce(lambda x, y: y.std.MergeDiff(clip.std.MakeDiff(x)), clips_merge, clip)
+    return reduce(lambda x, y: y.std.MergeDiff(clip.std.MakeDiff(x)), clips_merge, clip)  # type: ignore
 
 
 MultiGrainerT = Grainer | type[Grainer] | tuple[Grainer | type[Grainer] | None, float] | tuple[
