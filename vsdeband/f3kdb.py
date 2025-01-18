@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Literal, NamedTuple, NoReturn, Self, Union, overload
 
 from vstools import (
-    ColorRange, ColorRangeT, CustomIntEnum, CustomRuntimeError, FuncExceptT, FunctionUtil, PlanesT,
-    core, fallback, inject_self, normalize_seq, vs
+    CustomIntEnum, CustomRuntimeError, FuncExceptT, FunctionUtil, PlanesT, core, fallback,
+    inject_self, normalize_seq, vs
 )
 
 from .abstract import Debander
@@ -131,7 +131,6 @@ class F3kdb(Debander):
         sample_mode: SampleMode | SampleModeMidDiffInfo = SampleMode.SQUARE,
         dynamic_grain: bool = False,
         blur_first: bool | None = None,
-        color_range: ColorRangeT | None = None,
         seed: int | None = None,
         random: RandomAlgoT | tuple[RandomAlgoT, RandomAlgoT] = RandomAlgo.UNIFORM,
         planes: PlanesT = None,
@@ -149,7 +148,6 @@ class F3kdb(Debander):
         :param blur_first:      If True current pixel is compared with average value of all pixels.
                                 If False current pixel is compared with all pixels. 
                                 The pixel is considered as banded pixel only if all differences are less than threshold.
-        :param color_range:     If color_range is limited, all processed pixels will be clamped to TV range.
         :param seed:            Seed for random number generation
         :param random:          Random number algorithm for reference positions / grains.
         :param planes:          Which planes to process.
@@ -168,10 +166,6 @@ class F3kdb(Debander):
         gry, grc = normalize_seq(fallback(self.grain, grain), 2)
 
         sample_mode = fallback(self.sample_mode, sample_mode)  # type: ignore
-
-        color_range = ColorRange.from_param(
-            color_range, self.deband
-        ) or ColorRange.from_video(func.work_clip, func=func.func)
 
         random_ref, random_grain = normalize_seq(random, 2)
 
@@ -201,7 +195,7 @@ class F3kdb(Debander):
         debanded = core.neo_f3kdb.Deband(
             func.work_clip, radius, y, cb, cr, gry * 255 * 0.8, grc * 255 * 0.8,  # type: ignore
             sample_mode.value, self.seed or seed, blur_first, self.dynamic_grain or dynamic_grain,
-            None, None, None, color_range.is_limited, 16, random_algo_ref, random_algo_grain,
+            None, None, None, False, 16, random_algo_ref, random_algo_grain,
             random_param_ref, random_param_grain, None, y1, cb1, cr1, y2, cb2, cr2, True
         )
 
