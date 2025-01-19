@@ -27,10 +27,10 @@ def deband_detail_mask(
     blur_ret_diff = Morpho.deflate(ExprOp.SUB(blur_ret, ret))
 
     blur_ret_brz = Morpho.inflate(blur_ret_diff, 4)
-    blur_ret_brz = Morpho.closing(Morpho.binarize(blur_ret_brz, brz0), coords=8)
+    blur_ret_brz = Morpho.closing(Morpho.binarize(blur_ret_brz, brz0), 3)
 
     prewitt_mask = Morpho.inflate(Morpho.deflate(Prewitt.edgemask(clip_y, brz1, brz1)))
-    prewitt_brz = Morpho.closing(Morpho.binarize(prewitt_mask, brz1), coords=4)
+    prewitt_brz = Morpho.closing(Morpho.binarize(prewitt_mask, brz1), 2)
 
     merged = ExprOp.ADD(blur_ret_brz, prewitt_brz)
 
