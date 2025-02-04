@@ -7,7 +7,7 @@ from vsdenoise import Prefilter, frequency_merge
 from vsexprtools import ExprOp
 from vskernels import Scaler, ScalerT, Spline64
 from vsmasktools import FDoG, Morpho, flat_mask, texture_mask
-from vsrgtools import MeanMode, RemoveGrainMode, RemoveGrainModeT, box_blur, gauss_blur, limit_filter, removegrain
+from vsrgtools import BlurMatrix, MeanMode, RemoveGrainMode, RemoveGrainModeT, box_blur, gauss_blur, limit_filter, removegrain
 from vstools import (
     ColorRange, PlanesT, VSFunction, check_ref_clip, check_variable, depth, expect_bits, fallback, normalize_planes,
     normalize_seq, scale_value, to_arr, vs
@@ -183,7 +183,7 @@ def guided_deband(
             rmask = rmask.std.Binarize(threshold=bin_thr, planes=planes)
 
         rmask = removegrain(rmask, RemoveGrainMode.OPP_CLIP_AVG_FAST)
-        rmask = removegrain(rmask, RemoveGrainMode.SQUARE_BLUR)
+        rmask = BlurMatrix.BINOMIAL()(rmask)
         rmask = removegrain(rmask, RemoveGrainMode.MIN_SHARP)
 
         deband = deband.std.MaskedMerge(clip, rmask, planes=planes)
