@@ -10,9 +10,10 @@ from vsexprtools import complexpr_available, norm_expr
 from vskernels import BicubicAuto, Bilinear, Catrom, Kernel, KernelT, Lanczos, LinearLight, Scaler, ScalerT
 from vsmasktools import adg_mask
 from vstools import (
-    CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError, KwargsT, Matrix, MatrixT, PlanesT,
-    check_variable, core, depth, fallback, get_neutral_value, get_neutral_values, get_peak_value, get_sample_type,
-    ColorRange, inject_self, get_y, join, mod_x, normalize_seq, plane, scale_value, split, to_arr, vs
+    ColorRange, CustomIndexError, CustomOverflowError, CustomValueError, InvalidColorFamilyError,
+    KwargsT, Matrix, MatrixT, PlanesT, check_variable, core, depth, fallback, get_neutral_value,
+    get_neutral_values, get_peak_value, get_sample_type, get_y, inject_self, join, limiter, mod_x,
+    normalize_seq, plane, scale_value, split, to_arr, vs
 )
 
 from .f3kdb import F3kdb
@@ -485,7 +486,7 @@ class LinearLightGrainer(Grainer):
 
         with LinearLight(clip, True, (6.5, gamma), self.kernel) as ll:
             kwargs = self._get_inner_kwargs(strength, **kwargs)
-            ll.linear = self._perform_linear_graining(ll.linear.std.Limiter(), **kwargs)
+            ll.linear = self._perform_linear_graining(limiter(ll.linear, func=self.__class__), **kwargs)
 
         return ll.out
 
