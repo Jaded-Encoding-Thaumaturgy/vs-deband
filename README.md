@@ -1,19 +1,12 @@
 # vs-deband, a collection of wrappers and functions for debanding
 
+> [!CAUTION]
+> This package is deprecated!
+> Please use https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack instead.
+
 For support you can check out the [JET Discord server](https://discord.gg/XTpc6Fa9eB). <br><br>
 
 ## How to install
+**This package is deprecated!**
 
-Install `vsdeband` with the following command:
-
-```sh
-pip install vsdeband
-```
-
-Or if you want the latest git version, install it with this command:
-
-```sh
-pip install git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-deband.git
-```
-
-<br>
+Please install https://pypi.org/p/vsjetpack instead.
